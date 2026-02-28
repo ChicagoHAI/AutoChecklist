@@ -1,0 +1,63 @@
+site_name: autochecklist
+site_url: https://autochecklist.github.io/docs/
+site_description: A library of checklist generation and scoring methods for evaluation
+repo_url: https://github.com/ChicagoHAI/AutoChecklist
+repo_name: ChicagoHAI/AutoChecklist
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+  custom_dir: docs/overrides
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocs-autoapi:
+      autoapi_dir: autochecklist
+      autoapi_root: autoapi
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            members_order: source
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+  - User Guide:
+      - Pipeline & Composability: user-guide/pipeline.md
+      - Generators: user-guide/generators.md
+      - Refiners: user-guide/refiners.md
+      - Scorers: user-guide/scorers.md
+      - Supported Pipelines: user-guide/supported-pipelines.md
+      - Custom Prompts: user-guide/custom-prompts.md
+      - Providers: user-guide/providers.md
+
+extra_css:
+  - overrides/extra.css
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true

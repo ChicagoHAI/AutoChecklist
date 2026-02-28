@@ -1,0 +1,41 @@
+{
+  "id": "9ca5de19-3cb0-4154-97ee-c6f27b17a9c1",
+  "items": [
+    {
+      "id": "73e81fe4",
+      "question": "Is the response written in haiku form (three short lines)?",
+      "weight": 100.0,
+      "category": null,
+      "metadata": {}
+    },
+    {
+      "id": "14f4e2b8",
+      "question": "Does the haiku adhere to a 5-7-5 syllable structure?",
+      "weight": 100.0,
+      "category": null,
+      "metadata": {}
+    },
+    {
+      "id": "b06fde4e",
+      "question": "Is the haiku explicitly about a season (mentions a season or uses clear seasonal imagery)?",
+      "weight": 100.0,
+      "category": null,
+      "metadata": {}
+    },
+    {
+      "id": "1f817be1",
+      "question": "Does the haiku use concise, sensory imagery rather than exposition or explanation?",
+      "weight": 100.0,
+      "category": null,
+      "metadata": {}
+    }
+  ],
+  "source_method": "tick",
+  "generation_level": "instance",
+  "created_at": "2026-02-27T06:04:46.024280Z",
+  "input": "Write a haiku about any season",
+  "corpus_description": null,
+  "metadata": {
+    "raw_response": "{\"questions\":[{\"question\":\"Is the response written in haiku form (three short lines)?\"},{\"question\":\"Does the haiku adhere to a 5-7-5 syllable structure?\"},{\"question\":\"Is the haiku explicitly about a season (mentions a season or uses clear seasonal imagery)?\"},{\"question\":\"Does the haiku use concise, sensory imagery rather than exposition or explanation?\"}]}"
+  }
+}

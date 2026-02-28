@@ -1,0 +1,9 @@
+/* UChicago Maroon — matches UI accent (#800000) */
+/* Must use [data-md-color-scheme] to override mkdocs-material's palette specificity */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #800000;
+  --md-primary-fg-color--light: #a03030;
+  --md-primary-fg-color--dark: #600000;
+  --md-accent-fg-color: #800000;
+  --md-accent-fg-color--transparent: rgba(128, 0, 0, 0.1);
+}

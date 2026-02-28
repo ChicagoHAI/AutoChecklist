@@ -1,0 +1,34 @@
+[project]
+name = "autochecklist-ui-backend"
+version = "0.1.0"
+description = "FastAPI backend for AutoChecklist UI demo"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.0.0",
+    "autochecklist",
+    "python-multipart>=0.0.22",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "httpx>=0.26.0",
+]
+
+[tool.uv.sources]
+autochecklist = { path = "../../", editable = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.0.2",
+]
