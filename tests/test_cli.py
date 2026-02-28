@@ -171,6 +171,14 @@ class TestCLIIntegration:
         captured = capsys.readouterr()
         assert "Macro pass rate" in captured.err
         assert os.path.exists(output)
+        import json
+        with open(output) as f:
+            records = [json.loads(line) for line in f]
+        assert len(records) == 2
+        for rec in records:
+            assert "input" in rec
+            assert "checklist" in rec
+            assert "score" in rec
 
     def test_generate_end_to_end(self, sample_data, tmp_path, capsys):
         output = str(tmp_path / "checklists.jsonl")
@@ -184,3 +192,10 @@ class TestCLIIntegration:
         captured = capsys.readouterr()
         assert "Generated 2 checklists" in captured.err
         assert os.path.exists(output)
+        import json
+        with open(output) as f:
+            records = [json.loads(line) for line in f]
+        assert len(records) == 2
+        for rec in records:
+            assert "input" in rec
+            assert "checklist" in rec

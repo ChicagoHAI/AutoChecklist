@@ -8,11 +8,16 @@ theme:
   name: material
   palette:
     - scheme: default
+      primary: custom
+      accent: custom
   custom_dir: docs/overrides
+  font:
+    text: Inter
+    code: Space Mono
+  logo: assets/ac_white.png
+  favicon: assets/ac_bg_dark.png
   features:
-    - navigation.tabs
     - navigation.sections
-    - navigation.expand
     - search.suggest
     - content.code.copy
 
@@ -44,6 +49,7 @@ nav:
       - Scorers: user-guide/scorers.md
       - Supported Pipelines: user-guide/supported-pipelines.md
       - Custom Prompts: user-guide/custom-prompts.md
+      - CLI: user-guide/cli.md
       - Providers: user-guide/providers.md
 
 extra_css:
@@ -59,5 +65,7 @@ markdown_extensions:
   - pymdownx.details
   - attr_list
   - md_in_html
+  - pymdownx.tasklist:
+      custom_checkbox: true
   - toc:
       permalink: true

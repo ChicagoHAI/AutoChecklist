@@ -627,6 +627,7 @@ class TestPipelineIntegration:
         assert isinstance(result, PipelineResult)
         assert result.checklist is not None
         assert len(result.checklist.items) > 0
+        assert all(isinstance(item.question, str) and len(item.question) > 0 for item in result.checklist.items)
         assert result.score is not None
         assert 0 <= result.pass_rate <= 1
 
@@ -636,6 +637,7 @@ class TestPipelineIntegration:
 
         assert result.checklist is not None
         assert len(result.checklist.items) > 0
+        assert all(isinstance(item.question, str) and len(item.question) > 0 for item in result.checklist.items)
         assert result.score is None
         assert result.pass_rate is None
 
@@ -646,6 +648,7 @@ class TestPipelineIntegration:
         assert isinstance(checklist, Checklist)
         assert checklist.source_method == "tick"
         assert len(checklist.items) > 0
+        assert all(isinstance(item.question, str) and len(item.question) > 0 for item in checklist.items)
 
     def test_score_method(self, tick_pipeline):
         """score() scores against existing checklist."""
@@ -684,7 +687,7 @@ class TestPipelineIntegration:
         assert isinstance(result, BatchResult)
         assert len(result.scores) == 2
         assert len(result.checklists) == 2
-        assert result.macro_pass_rate >= 0
+        assert 0.0 <= result.macro_pass_rate <= 1.0
 
     def test_run_batch_with_shared_checklist(self, tick_pipeline):
         """run_batch() uses shared checklist when provided."""

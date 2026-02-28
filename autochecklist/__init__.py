@@ -11,6 +11,10 @@ from .models import (
     DeductiveInput,
     FeedbackInput,
     InteractiveInput,
+    ChecklistResponse,
+    WeightedChecklistResponse,
+    CategorizedChecklistResponse,
+    GeneratedCategorizedQuestion,
 )
 from .config import configure, get_config
 from .generators.instance_level.direct import DirectGenerator

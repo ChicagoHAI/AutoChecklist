@@ -1,6 +1,6 @@
 """ContrastiveGenerator: Candidate-based checklist generation (RLCF candidate modes)."""
 
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from ...models import Checklist, to_response_format
 from ...providers.factory import get_client
@@ -24,6 +24,7 @@ class ContrastiveGenerator(DirectGenerator):
         self,
         candidate_models: Optional[List[str]] = None,
         num_candidates: int = 4,
+        generate_candidates: Optional[bool] = None,
         candidate_provider: Optional[str] = None,
         candidate_base_url: Optional[str] = None,
         candidate_api_key: Optional[str] = None,
@@ -31,6 +32,13 @@ class ContrastiveGenerator(DirectGenerator):
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
+        # Read generate_candidates from preset if not explicitly provided
+        from .pipeline_presets import PIPELINE_PRESETS
+        preset = PIPELINE_PRESETS.get(self._method_name, {})
+        if generate_candidates is None:
+            self.generate_candidates = preset.get("generate_candidates", True)
+        else:
+            self.generate_candidates = generate_candidates
         self.candidate_models = candidate_models
         self.num_candidates = num_candidates
         self._candidate_provider = candidate_provider
@@ -43,7 +51,7 @@ class ContrastiveGenerator(DirectGenerator):
         input: str,
         target: Optional[str] = None,
         reference: Optional[str] = None,
-        candidates: Optional[List[str]] = None,
+        candidates: Optional[Union[List[str], Dict[str, str]]] = None,
         **kwargs: Any,
     ) -> Checklist:
         """Generate checklist from input + candidates.
@@ -52,46 +60,94 @@ class ContrastiveGenerator(DirectGenerator):
             input: The instruction/query
             target: Alias for reference
             reference: Expert/reference target (optional for candidates_only)
-            candidates: List of candidate targets. If not provided and
-                candidate_models is set, auto-generated.
+            candidates: Candidate responses. Can be:
+                - List[str]: multiple candidates (RLCF or listwise)
+                - Dict with "chosen"/"rejected" keys (pairwise CRG)
+                - None: auto-generated if candidate_models is set
             **kwargs: Additional arguments
         """
         # Get or generate candidates
         if candidates is None:
-            if self.candidate_models:
+            if self.generate_candidates and self.candidate_models:
                 candidates = self._generate_candidates(input)
             else:
                 raise ValueError(
-                    f"{self.method_name} requires 'candidates' argument "
-                    "or 'candidate_models' in constructor."
+                    f"{self.method_name} requires 'candidates' argument."
                 )
 
-        # Format candidates and delegate to _generate_with_candidates
-        formatted = self._format_candidates(candidates)
+        # Delegate to _generate_with_candidates with raw candidates
         checklist = self._generate_with_candidates(
             input=input,
-            candidates_text=formatted,
+            candidates=candidates,
             reference=reference,
             **kwargs,
         )
-        # Store raw candidates in metadata (not available inside _generate_with_candidates)
-        checklist.metadata["candidates"] = candidates
+        # Store raw candidates and count in metadata
+        if isinstance(candidates, dict):
+            checklist.metadata["candidates"] = list(candidates.values())
+            checklist.metadata["num_candidates"] = 2
+        else:
+            checklist.metadata["candidates"] = candidates
+            checklist.metadata["num_candidates"] = len(candidates)
         return checklist
 
     def _generate_with_candidates(
         self,
         input: str,
-        candidates_text: str,
+        candidates: Union[List[str], Dict[str, str]],
         reference: Optional[str] = None,
         **kwargs: Any,
     ) -> Checklist:
-        """Build prompt with candidates and call model."""
-        format_kwargs: dict[str, str] = {
-            "input": input,
-            "candidates": candidates_text,
-        }
+        """Build prompt with candidates and call model.
 
-        if "reference" in self._template._placeholders:
+        Routes candidates to template placeholders based on type and template:
+        - Dict → {chosen} + {rejected} placeholders (pairwise CRG)
+        - List + {responses} placeholder → numbered Response blocks (listwise)
+        - List + {candidates} placeholder → numbered Candidate blocks (RLCF)
+        """
+        placeholders = self._template._placeholders
+        format_kwargs: dict[str, str] = {"input": input}
+
+        # --- Route candidates to placeholders ---
+        if isinstance(candidates, dict):
+            # Pairwise: dict must have chosen+rejected, template must have those placeholders
+            if "candidates" in placeholders:
+                raise ValueError(
+                    "Template has {candidates} placeholder but received dict candidates. "
+                    "Use {chosen}/{rejected} placeholders for pairwise, or pass a list."
+                )
+            if not {"chosen", "rejected"} <= placeholders:
+                raise ValueError(
+                    "Template must have {chosen} and {rejected} placeholders for dict candidates."
+                )
+            if set(candidates.keys()) != {"chosen", "rejected"}:
+                raise ValueError(
+                    "Dict candidates must have exactly 'chosen' and 'rejected' keys, "
+                    f"got: {set(candidates.keys())}"
+                )
+            format_kwargs["chosen"] = candidates["chosen"]
+            format_kwargs["rejected"] = candidates["rejected"]
+        else:
+            # List candidates
+            if "chosen" in placeholders or "rejected" in placeholders:
+                raise ValueError(
+                    "Template has {chosen}/{rejected} placeholders but received list candidates. "
+                    "Pass a dict with 'chosen' and 'rejected' keys instead."
+                )
+            if "responses" in placeholders:
+                format_kwargs["responses"] = self._format_ordered_responses(candidates)
+            elif "candidates" in placeholders:
+                format_kwargs["candidates"] = self._format_candidates(candidates)
+            else:
+                raise ValueError(
+                    "Template must have {candidates} or {responses} placeholder for list candidates."
+                )
+
+        # --- Handle optional placeholders ---
+        if "context" in placeholders:
+            format_kwargs["context"] = kwargs.pop("context", "")
+
+        if "reference" in placeholders:
             if reference is None:
                 raise ValueError(
                     f"{self.method_name} requires a reference target."
@@ -103,7 +159,7 @@ class ContrastiveGenerator(DirectGenerator):
 
         # Inject format inline if template has {format_instructions} placeholder,
         # otherwise append after the prompt (default).
-        if "format_instructions" in self._template._placeholders:
+        if "format_instructions" in placeholders:
             format_kwargs["format_instructions"] = format_text
             full_prompt = self._template.format(**format_kwargs)
         else:
@@ -121,10 +177,7 @@ class ContrastiveGenerator(DirectGenerator):
             source_method=self.method_name,
             generation_level=self.generation_level,
             input=input,
-            metadata={
-                "raw_response": raw,
-                "num_candidates": len(candidates_text.split("### Candidate")) - 1,
-            },
+            metadata={"raw_response": raw},
         )
 
     def _get_candidate_client(self) -> Any:
@@ -174,6 +227,13 @@ class ContrastiveGenerator(DirectGenerator):
                 candidates.append(resp["choices"][0]["message"]["content"])
 
         return candidates
+
+    def _format_ordered_responses(self, responses: List[str]) -> str:
+        """Format responses as numbered Response blocks for listwise CRG."""
+        formatted = []
+        for i, response in enumerate(responses, 1):
+            formatted.append(f"### Response {i}\n{response}")
+        return "\n\n".join(formatted)
 
     def _format_candidates(self, candidates: List[str]) -> str:
         """Format candidate responses for prompt injection."""

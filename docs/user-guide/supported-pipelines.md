@@ -16,6 +16,8 @@ Pipelines are named presets that configure a [generator](generators.md) with a s
 | RLCF Direct | Instance | `rlcf_direct` | `DirectGenerator` | Direct inference | `weighted_score` |
 | RLCF Candidate | Instance | `rlcf_candidate` | `ContrastiveGenerator` | Counterfactual reasoning | `weighted_score` |
 | RLCF Candidates Only | Instance | `rlcf_candidates_only` | `ContrastiveGenerator` | Counterfactual reasoning | `weighted_score` |
+| OpenRubrics Pairwise | Instance | `openrubrics_pairwise` | `ContrastiveGenerator` | Contrastive rubric generation | `pass_rate` |
+| OpenRubrics Listwise | Instance | `openrubrics_listwise` | `ContrastiveGenerator` | Contrastive rubric generation | `pass_rate` |
 | Feedback | Corpus | `feedback` | `InductiveGenerator` | Inductive (bottom-up) | `pass_rate` |
 | CheckEval | Corpus | `checkeval` | `DeductiveGenerator` | Deductive (top-down) | `pass_rate` |
 | InteractEval | Corpus | `interacteval` | `InteractiveGenerator` | Protocol analysis | `pass_rate` |
@@ -199,11 +201,85 @@ result = pipe(input="...", target="...", candidates=["resp1", "resp2"])
 
 ---
 
+### OpenRubrics CRG (Contrastive Rubric Generation)
+
+**Paper:** [arXiv:2510.07743](https://arxiv.org/abs/2510.07743)
+
+**Original methodology:** OpenRubrics generates universal scoring rubrics from preference data through a three-step process: (1) extract explicit requirements ("hard rules") from the input, (2) analyze concrete differences between better and worse responses, (3) abstract those differences into universal principles. The key insight is that contrasting responses of known quality reveals evaluation criteria that are both generalizable and grounded in real quality differences. Two modes are supported: pairwise (chosen vs rejected) and listwise (ranked list of responses).
+
+**Our implementation:**
+
+OpenRubrics does **not** auto-generate candidates, the preference data (chosen/rejected pairs or ranked responses) is provided as input. Items are categorized as `hard_rule` (from explicit requirements) or `principle` (abstracted from response differences).
+
+#### OpenRubrics Pairwise
+
+Generates rubric items by analyzing why a chosen response is superior to a rejected one.
+
+| Setting | Value |
+|---------|-------|
+| Pipeline | `openrubrics_pairwise` |
+| Generator | `ContrastiveGenerator` with `openrubrics/pairwise.md` template |
+| Input required | `input` + `candidates` (dict with `chosen`/`rejected` keys) |
+| Temperature | 0.0 |
+| Max items | 15 (min 1) |
+| Response schema | `CategorizedChecklistResponse` |
+| Primary metric | `pass_rate` |
+
+```python
+from autochecklist import pipeline
+
+pipe = pipeline("openrubrics_pairwise", generator_model="openai/gpt-5-mini", scorer_model="openai/gpt-5-mini")
+result = pipe(
+    input="Explain photosynthesis.",
+    target="Photosynthesis involves chlorophyll...",
+    candidates={"chosen": "Photosynthesis is the process by which plants convert...",
+                "rejected": "Plants use sunlight to grow."},
+)
+print(result.pass_rate)
+```
+
+#### OpenRubrics Listwise
+
+Generates rubric items by analyzing an ordered list of responses (best to worst).
+
+| Setting | Value |
+|---------|-------|
+| Pipeline | `openrubrics_listwise` |
+| Generator | `ContrastiveGenerator` with `openrubrics/listwise.md` template |
+| Input required | `input` + `candidates` (list, ordered best→worst) |
+| Temperature | 0.0 |
+| Max items | 20 (min 1) |
+| Response schema | `CategorizedChecklistResponse` |
+| Primary metric | `pass_rate` |
+
+```python
+pipe = pipeline("openrubrics_listwise", generator_model="openai/gpt-5-mini", scorer_model="openai/gpt-5-mini")
+result = pipe(
+    input="Explain photosynthesis.",
+    target="Photosynthesis involves chlorophyll...",
+    candidates=["Best response...", "Good response...", "Weak response..."],
+)
+print(result.pass_rate)
+```
+
+!!! info "Categorized Output"
+    OpenRubrics pipelines produce `CategorizedChecklistResponse` — each item has a `category` field set to either `hard_rule` or `principle`. Use `checklist.by_category()` to split items by type.
+
+**Differences from paper:**
+
+| Paper feature | Our implementation |
+|---------------|-------------------|
+| Rubrics condition a reward model for binary preference prediction (A vs B) | Rubric items scored individually as YES/NO with pass rate aggregation |
+| Preference-label consistency filtering (rejection sampling to keep rubrics that predict the correct preference) | No filtering; all generated items are kept |
+| Reward model SFT training pipeline (Rubric-RM) | Out of scope — this library focuses on rubric generation and scoring, not RM training |
+
+---
+
 ## Corpus-Level Methods
 
 ### Feedback (From Feedback to Checklists)
 
-**Paper:** EMNLP 2025 Industry Track, "From Feedback to Checklists"
+**Paper:** [arXiv:2507.17717](https://arxiv.org/abs/2507.17717)
 
 **Original methodology:** Transforms user/reviewer feedback into evaluation checklists through a 5-stage pipeline: (1) generate candidate questions from feedback batches, (2) merge redundant questions via embeddings, (3) filter by applicability and specificity, (4) validate enforceability via unit testing, (5) select a diverse subset via beam search. Evaluated on clinical note quality. The key insight is that real user feedback captures evaluation criteria that predefined rubrics miss.
 
@@ -328,6 +404,8 @@ InteractEval-style 1–5 scoring is available via `result.score.scaled_score_1_5
 | RLCF Direct | Instance | `input` | Yes | No | `weighted_score` | No |
 | RLCF Candidate | Instance | `input` | Yes | Yes (auto) | `weighted_score` | No |
 | RLCF Candidates Only | Instance | `input` | No | Yes (auto) | `weighted_score` | No |
+| OpenRubrics Pairwise | Instance | `input` | No | No (provided) | `pass_rate` | No |
+| OpenRubrics Listwise | Instance | `input` | No | No (provided) | `pass_rate` | No |
 | Feedback | Corpus | `observations` list | No | No | `pass_rate` | Yes (dedup, tag, select) |
 | CheckEval | Corpus | `dimensions` | No | No | `pass_rate` | Yes (augment, filter, dedup) |
 | InteractEval | Corpus | `think-aloud` | No | No | `pass_rate` (or 1–5) | Yes (5-stage pipeline) |

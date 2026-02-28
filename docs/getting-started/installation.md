@@ -1,5 +1,20 @@
 # Installation
 
+## Install from PyPI
+
+```bash
+pip install autochecklist
+# or with uv
+uv pip install autochecklist
+```
+
+### Optional: vLLM for offline inference
+
+```bash
+pip install "autochecklist[vllm]"
+```
+
+
 ## From Source
 
 ```bash
@@ -14,11 +29,6 @@ uv sync
 uv pip install -e /path/to/autochecklist
 ```
 
-## Optional: vLLM for Offline Inference
-
-```bash
-uv pip install "autochecklist[vllm]"
-```
 
 ## Environment Setup
 

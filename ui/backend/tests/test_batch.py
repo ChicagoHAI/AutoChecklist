@@ -389,8 +389,10 @@ class TestStartBatch:
             assert success is True
 
             # Wait for thread to finish
-            if batch_id in br._running_jobs:
-                br._running_jobs[batch_id].join(timeout=5)
+            thread = br._running_jobs.get(batch_id)
+            if thread:
+                thread.join(timeout=5)
+                assert not thread.is_alive(), "Background thread did not complete within timeout"
 
         # Check summary updated
         summary = br.get_batch_status(batch_id)
@@ -419,8 +421,10 @@ class TestStartBatch:
             assert success is True
 
             # Wait for thread
-            if batch_id in br._running_jobs:
-                br._running_jobs[batch_id].join(timeout=5)
+            thread = br._running_jobs.get(batch_id)
+            if thread:
+                thread.join(timeout=5)
+                assert not thread.is_alive(), "Background thread did not complete within timeout"
 
         summary = br.get_batch_status(batch_id)
         assert summary["status"] == "failed"
@@ -442,8 +446,10 @@ class TestStartBatch:
 
             br.start_batch(batch_id, {"provider": "openrouter", "model": "test"})
 
-            if batch_id in br._running_jobs:
-                br._running_jobs[batch_id].join(timeout=5)
+            thread = br._running_jobs.get(batch_id)
+            if thread:
+                thread.join(timeout=5)
+                assert not thread.is_alive(), "Background thread did not complete within timeout"
 
         summary = br.get_batch_status(batch_id)
         assert summary["status"] == "failed"
@@ -550,8 +556,10 @@ class TestBatchAPI:
 
             # Wait for background thread
             import app.services.batch_runner as br
-            if batch_id in br._running_jobs:
-                br._running_jobs[batch_id].join(timeout=5)
+            thread = br._running_jobs.get(batch_id)
+            if thread:
+                thread.join(timeout=5)
+                assert not thread.is_alive(), "Background thread did not complete within timeout"
 
         # Check completed
         resp = client.get(f"/api/batch/{batch_id}")

@@ -11,6 +11,7 @@ prompts/
 ├── generators/
 │   ├── tick/generate.md          # TICK checklist generation
 │   ├── rlcf/                     # RLCF (direct, candidate-based, candidates-only)
+│   ├── openrubrics/              # OpenRubrics CRG (pairwise, listwise)
 │   ├── rocketeval/generate.md    # RocketEval generation
 │   ├── feedback/                 # InductiveGenerator (generate, tag, merge, rewrite)
 │   ├── checkeval/                # DeductiveGenerator (generate, augment, filter)
@@ -27,6 +28,10 @@ prompts/
 | `{input}` | Yes | The input instruction/task |
 | `{target}` | No | The response being evaluated |
 | `{reference}` | No | A reference/gold response |
+| `{chosen}` | No | Preferred response (pairwise CRG) |
+| `{rejected}` | No | Dispreferred response (pairwise CRG) |
+| `{responses}` | No | Ordered response list (listwise CRG) |
+| `{context}` | No | Optional context (defaults to empty) |
 
 ### Scorer
 | Placeholder | Required | Description |

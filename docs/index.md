@@ -1,5 +1,9 @@
 # AutoChecklist
 
+[![GitHub Stars](https://img.shields.io/github/stars/ChicagoHAI/AutoChecklist?style=flat-square)](https://github.com/ChicagoHAI/AutoChecklist)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg?style=flat-square)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg?style=flat-square)](LICENSE)
+
 `AutoChecklist` is an open-source library that unifies LLM-based checklist evaluation into composable pipelines, in a `pip`-installable Python package (`autochecklist`) with CLI and UI features.
 
 ### Features
@@ -7,15 +11,13 @@
 -  **Composable pipelines** eight built-in configurations implementing published methods, compatible with a unified scorer that consolidates three scoring strategies from literature
 -  **CLI** for off-the-shelf evaluation with pre-defined pipelines
 -  **Multi-provider LLM backend** with support for OpenAI, OpenRouter, and vLLM
--  **Locally hosted UI** allowing for interactive prompt customization, pipeline configuration, and batch evaluation
 
 ## Concepts
 
-> [!TIP]
-> Some terminology:
-> - **`input`**: The instruction, query, or task given to the LLM being evaluated (e.g., "Write a haiku about autumn").
-> - **`target`**: The output being evaluated against the checklist (e.g., the haiku the LLM produced).
-> - **`reference`**: An optional gold-standard response used by some methods to improve checklist generation.
+!!! tip "Terminology"
+    - **`input`**: The instruction, query, or task given to the LLM being evaluated (e.g., "Write a haiku about autumn").
+    - **`target`**: The output being evaluated against the checklist (e.g., the haiku the LLM produced).
+    - **`reference`**: An optional gold-standard response used by some methods to improve checklist generation.
 
 
 ### Checklist Generator Abstractions
@@ -67,115 +69,33 @@ Refiners are pipeline stages that clean up raw checklists before scoring. They'r
 
 ## Installation
 
-### `pip`
-
 ```bash
 uv pip install autochecklist
-
-# Optional: install vLLM for offline inference (needs GPU)
-uv pip install "autochecklist[vllm]"
 ```
 
+For full setup options (source install, editable mode, vLLM extra, `.env` keys), see [Installation](getting-started/installation.md).
 
-### From source:
+## Start Here
 
-```bash
-# Clone the repository
-git clone https://github.com/ChicagoHAI/AutoChecklist.git
-cd AutoChecklist
+1. New users: [Quick Start](getting-started/quickstart.md)
+2. Composing custom evaluation flows: [Pipeline Guide](user-guide/pipeline.md)
+3. Running from terminal: [CLI Guide](user-guide/cli.md)
+4. Picking a method from papers: [Supported Pipelines](user-guide/supported-pipelines.md)
 
-# Install dependencies
-uv sync
-
-
-# Set up environment
-cp .env.example .env
-# Edit .env and add your API key(s):
-#   OPENROUTER_API_KEY=sk-or-...   (for OpenRouter, the default provider)
-#   OPENAI_API_KEY=sk-...          (for direct OpenAI or corpus-level embeddings)
-```
-
-To use in another project:
-```bash
-uv pip install -e /path/to/AutoChecklist
-```
-
-## Using the Package
-
-### Custom Prompts
-
-Write a prompt template and generate a checklist:
-
-```python
-from autochecklist import DirectGenerator, ChecklistScorer
-
-gen = DirectGenerator(
-    custom_prompt="You are an expert evaluator. Generate yes/no checklist questions to score:\n\n{input}",
-    model="openai/gpt-5-mini",
-)
-checklist = gen.generate(input="Write a haiku about autumn.")
-
-scorer = ChecklistScorer(mode="batch", model="openai/gpt-5-mini")
-score = scorer.score(checklist, target="Leaves fall gently down...")
-print(f"Pass rate: {score.pass_rate:.0%}")
-```
-
-Scorers also take custom prompts. Prompts can also be loaded from `.md` files — see [Custom Prompts](user-guide/custom-prompts.md) for the full guide (placeholders, custom scorers, registration).
-
-### Custom Pipelines
-
-Register a custom pipeline (generator + scorer + prompts) as a reusable unit:
-
-```python
-from autochecklist import register_custom_pipeline, pipeline
-
-# Register from config
-register_custom_pipeline(
-    "my_eval",
-    generator_prompt="Generate yes/no questions for:\n\n{input}",
-    scorer="weighted",
-)
-pipe = pipeline("my_eval", generator_model="openai/gpt-5-mini")
-
-# Or register from an existing pipeline instance
-register_custom_pipeline("my_eval_v2", pipe)
-
-# Save/load pipeline configs as JSON
-from autochecklist import save_pipeline_config, load_pipeline_config
-save_pipeline_config("my_eval", "my_eval.json")
-load_pipeline_config("my_eval.json")  # registers and returns the name
-```
-
-### Built-in Pipelines
-
-The library includes pipelines implementing methods from research papers. Use them via `method_name` or the `pipeline()` shorthand:
+## Minimal Example
 
 ```python
 from autochecklist import pipeline
 
 pipe = pipeline("tick", generator_model="openai/gpt-5-mini", scorer_model="openai/gpt-5-mini")
-result = pipe(input="Write a haiku about autumn", target="Leaves fall gently...")
+result = pipe(
+    input="Write a haiku about autumn.",
+    target="Leaves drift through cool dusk; amber fields breathe into night; geese stitch quiet skies.",
+)
 print(f"Pass rate: {result.pass_rate:.0%}")
 ```
 
-See [Supported Pipelines](user-guide/supported-pipelines.md) for the full list of pipelines, paper details, and configuration options.
-
-### Batch Evaluation
-
-```python
-data = [
-    {"input": "Write a haiku", "target": "Leaves fall..."},
-    {"input": "Write a limerick", "target": "There once was..."},
-]
-result = pipe.run_batch(data, show_progress=True)
-print(f"Macro pass rate: {result.macro_pass_rate:.0%}")
-```
-
-For pipeline composition, provider configuration, and the full API, see the [Pipeline Guide](user-guide/pipeline.md).
-
-### Command-Line Interface
-
-Run evaluations directly from the terminal:
+## CLI Example
 
 ```bash
 # Full evaluation (generate + score)
@@ -194,7 +114,7 @@ autochecklist score --data eval_data.jsonl --checklist checklist.json \
 autochecklist list
 ```
 
-API keys can be set via `--api-key`, environment variables (`OPENROUTER_API_KEY`), or a `.env` file. See the [CLI Guide](user-guide/cli.md) for full details.
+For all CLI flags and resumable runs, see [CLI Guide](user-guide/cli.md).
 
 ### Examples
 
@@ -205,47 +125,6 @@ Detailed examples with runnable code:
 - **[instance_level_demo.ipynb](https://github.com/ChicagoHAI/AutoChecklist/blob/main/examples/instance_level_demo.ipynb)** - DirectGenerator, ContrastiveGenerator (per-input checklists)
 - **[corpus_level_demo.ipynb](https://github.com/ChicagoHAI/AutoChecklist/blob/main/examples/corpus_level_demo.ipynb)** - InductiveGenerator, DeductiveGenerator, InteractiveGenerator (per-dataset checklists)
 
-
-## UI
-
-A web interface for demonstrating `autochecklist` methods. See [ui/README.md](https://github.com/ChicagoHAI/AutoChecklist/blob/main/ui/README.md) for details.
-
-**Quick Start:**
-```bash
-cd ui
-./launch_ui.sh
-# Frontend: http://localhost:7860
-# Backend:  http://localhost:7861
-```
-
-## Testing
-
-```bash
-# Core library fast tests (recommended default)
-uv run pytest -v -rs tests --ignore=ui/backend/tests -m 'not integration and not vllm_offline and not openai_api'
-
-# Core integration tests (real API / offline runtime)
-uv run pytest -v -rs tests --ignore=ui/backend/tests -m integration
-
-# Backend API tests
-cd ui/backend
-uv run pytest -v -rs tests
-```
-
-See [tests/README.md](https://github.com/ChicagoHAI/AutoChecklist/blob/main/tests/README.md) and [ui/backend/tests/README.md](https://github.com/ChicagoHAI/AutoChecklist/blob/main/ui/backend/tests/README.md) for details.
-
-
-## Automatic Documentation
-
-Preview the API docs locally with MkDocs:
-
-```bash
-uv run mkdocs serve                       # http://localhost:8000
-uv run mkdocs serve -a localhost:7772      # custom port
-uv run mkdocs serve -a 0.0.0.0:7772       # expose on network (e.g., http://your-server:7772)
-```
-
-API reference is auto-generated from docstrings via [mkdocs-autoapi](https://github.com/jcayers20/mkdocs-autoapi). New modules are discovered automatically — no manual page creation needed.
 
 ## Citation
 

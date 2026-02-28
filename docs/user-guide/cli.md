@@ -10,6 +10,17 @@ pip install autochecklist
 
 After installation, the `autochecklist` command is available globally.
 
+## Fastest Working Flow
+
+```bash
+# 1) Generate + score with a built-in pipeline
+autochecklist run --pipeline tick --data eval_data.jsonl -o results.jsonl \
+  --generator-model openai/gpt-4o-mini --scorer-model openai/gpt-4o-mini
+
+# 2) Inspect available built-ins and components
+autochecklist list
+```
+
 ## API Keys
 
 AutoChecklist needs an API key for the LLM provider. Three options (in order of precedence):
@@ -48,7 +59,7 @@ autochecklist run --pipeline tick --data eval_data.jsonl -o results.jsonl \
 | `--input-key` | No | JSONL key for input field (default: `input`) |
 | `--target-key` | No | JSONL key for target field (default: `target`) |
 
-*Either `--pipeline`, `--generator-prompt`, or `--config` must be provided.
+*Provide one of: `--pipeline`, `--generator-prompt`, or `--config`.
 
 ### `autochecklist generate` — Checklists only
 
@@ -81,6 +92,15 @@ autochecklist score --data eval_data.jsonl --checklist checklist.json \
 | `--overwrite` | No | Overwrite output |
 
 Plus the same provider flags (`--provider`, `--base-url`, `--api-key`, `--api-format`, `--input-key`, `--target-key`).
+
+## Choosing the Right Subcommand
+
+| Goal | Command |
+|---|---|
+| Generate and score in one pass | `autochecklist run` |
+| Generate checklists only | `autochecklist generate` |
+| Score using an existing checklist | `autochecklist score` |
+| List available components | `autochecklist list` |
 
 ### `autochecklist list` — Discover components
 

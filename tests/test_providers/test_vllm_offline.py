@@ -32,7 +32,7 @@ class TestVLLMClient:
             max_tokens=32,
         )
         assert "choices" in response
-        assert len(response["choices"]) > 0
+        assert len(response["choices"]) == 1
         content = response["choices"][0]["message"]["content"]
         assert isinstance(content, str)
         assert len(content) > 0
@@ -71,6 +71,8 @@ class TestVLLMClient:
         assert "no" in result
         assert isinstance(result["yes"], float)
         assert isinstance(result["no"], float)
+        assert 0 <= result["yes"] <= 1
+        assert 0 <= result["no"] <= 1
         assert result["yes"] > 0 or result["no"] > 0
 
     def test_batch_completions_returns_correct_count(self, vllm_offline_client):

@@ -1,6 +1,6 @@
 """Pipeline presets: pre-configured generator settings for each method."""
 
-from ...models import ChecklistResponse, WeightedChecklistResponse
+from ...models import ChecklistResponse, WeightedChecklistResponse, CategorizedChecklistResponse
 
 PIPELINE_PRESETS = {
     "tick": {
@@ -91,6 +91,36 @@ PIPELINE_PRESETS = {
         },
         "description": "Contrastive generation from candidates only",
         "detail": "Auto-generates candidate responses and derives weighted checklist items by comparing candidates. No reference needed.",
+        "requires_reference": False,
+    },
+    "openrubrics_pairwise": {
+        "generator_class": "ContrastiveGenerator",
+        "template_dir": "generators/openrubrics",
+        "template_name": "pairwise",
+        "response_schema": CategorizedChecklistResponse,
+        "format_name": "categorized_checklist",
+        "max_items": 15,
+        "min_items": 1,
+        "temperature": 0.0,
+        "generate_candidates": False,
+        "default_scorer": {"mode": "batch", "primary_metric": "pass"},
+        "description": "Contrastive rubric generation from preference pairs (OpenRubrics)",
+        "detail": "Generates checklist items by analyzing why a chosen response is superior to a rejected one. Items are categorized as hard_rule (explicit requirements) or principle (implicit qualities).",
+        "requires_reference": False,
+    },
+    "openrubrics_listwise": {
+        "generator_class": "ContrastiveGenerator",
+        "template_dir": "generators/openrubrics",
+        "template_name": "listwise",
+        "response_schema": CategorizedChecklistResponse,
+        "format_name": "categorized_checklist",
+        "max_items": 20,
+        "min_items": 1,
+        "temperature": 0.0,
+        "generate_candidates": False,
+        "default_scorer": {"mode": "batch", "primary_metric": "pass"},
+        "description": "Contrastive rubric generation from ranked response list (OpenRubrics)",
+        "detail": "Generates checklist items by analyzing an ordered list of responses (best to worst). Items are categorized as hard_rule or principle.",
         "requires_reference": False,
     },
 }

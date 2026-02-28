@@ -1,9 +1,72 @@
-/* UChicago Maroon — matches UI accent (#800000) */
-/* Must use [data-md-color-scheme] to override mkdocs-material's palette specificity */
+/* AutoChecklist docs theme — based on style_guide.md */
+/* UChicago Maroon brand + academic monospace typography */
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap');
+
+/* ── Light mode ─────────────────────────────────────── */
 [data-md-color-scheme="default"] {
   --md-primary-fg-color: #800000;
   --md-primary-fg-color--light: #a03030;
   --md-primary-fg-color--dark: #600000;
   --md-accent-fg-color: #800000;
-  --md-accent-fg-color--transparent: rgba(128, 0, 0, 0.1);
+  --md-accent-fg-color--transparent: rgba(128, 0, 0, 0.08);
+  --md-default-bg-color: #fafaf8;
+}
+
+/* ── Typography ─────────────────────────────────────── */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6 {
+  font-family: "Inconsolata", monospace;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #1a1a1e;
+}
+
+/* Tags and section labels */
+.md-tag {
+  font-family: "Space Mono", monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Code blocks only: Space Mono, slightly smaller */
+.md-typeset pre code {
+  font-family: "Space Mono", monospace;
+  font-size: 0.85em;
+  line-height: 1.6;
+}
+
+/* ── Selection ──────────────────────────────────────── */
+::selection {
+  background: rgba(128, 0, 0, 0.15);
+}
+
+/* ── Cards (admonitions) ────────────────────────────── */
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Code block styling ─────────────────────────────── */
+.md-typeset .highlight > pre,
+.md-typeset .highlight > .highlighttable {
+  border-radius: 12px;
+}
+
+/* ── Content area ───────────────────────────────────── */
+.md-typeset {
+  line-height: 1.7;
+}
+
+/* ── Focus outline (accessibility) ──────────────────── */
+:focus-visible {
+  outline: 2px solid #800000;
+  outline-offset: 2px;
 }

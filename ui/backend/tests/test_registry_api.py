@@ -33,6 +33,8 @@ class TestGenerators:
         for g in data:
             assert "name" in g
             assert "level" in g
+            assert g["level"] in ("instance", "corpus")
+            assert "description" in g
 
 class TestScorers:
     def test_list_scorers(self, client):

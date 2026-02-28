@@ -89,6 +89,29 @@ class TestDirectGeneratorConfig:
         assert len(items) == 1
 
 
+class TestCategorizedParsing:
+    def test_parse_structured_with_category(self):
+        from autochecklist.generators.instance_level.direct import DirectGenerator
+        from autochecklist.models import CategorizedChecklistResponse
+
+        gen = DirectGenerator(method_name="tick")
+        gen._response_schema = CategorizedChecklistResponse
+        raw = '{"questions": [{"question": "Does it follow instructions?", "category": "hard_rule"}, {"question": "Is reasoning clear?", "category": "principle"}]}'
+        items = gen._parse_structured(raw)
+        assert len(items) == 2
+        assert items[0].category == "hard_rule"
+        assert items[1].category == "principle"
+
+    def test_parse_structured_without_category_unchanged(self):
+        from autochecklist.generators.instance_level.direct import DirectGenerator
+
+        gen = DirectGenerator(method_name="tick")
+        raw = '{"questions": [{"question": "Is it a haiku?"}]}'
+        items = gen._parse_structured(raw)
+        assert len(items) == 1
+        assert items[0].category is None
+
+
 class TestContrastiveGeneratorConfig:
     def test_rlcf_candidate_preset_loads(self):
         from autochecklist.generators.instance_level.contrastive import ContrastiveGenerator
@@ -128,3 +151,133 @@ class TestContrastiveGeneratorConfig:
         gen = ContrastiveGenerator(method_name="rlcf_candidate")
         with pytest.raises(ValueError, match="requires 'candidates'"):
             gen.generate(input="Write a haiku.")
+
+
+class TestCandidateRouting:
+    """Test that candidates are routed to correct template placeholders."""
+
+    def _make_generator(self, template_text):
+        from autochecklist.generators.instance_level.contrastive import ContrastiveGenerator
+        gen = ContrastiveGenerator(
+            method_name="custom",
+            custom_prompt=template_text,
+            generate_candidates=False,
+        )
+        return gen
+
+    def test_dict_candidates_inject_chosen_rejected(self):
+        gen = self._make_generator("Input: {input}\nChosen: {chosen}\nRejected: {rejected}\n{format_instructions}")
+        from unittest.mock import MagicMock
+        gen._call_model = MagicMock(return_value='{"questions": [{"question": "Q1?"}]}')
+        gen.generate(input="Write a poem", candidates={"chosen": "Good poem", "rejected": "Bad poem"})
+        prompt = gen._call_model.call_args[0][0]
+        assert "Chosen: Good poem" in prompt
+        assert "Rejected: Bad poem" in prompt
+
+    def test_list_candidates_inject_responses(self):
+        gen = self._make_generator("Input: {input}\nResponses:\n{responses}\n{format_instructions}")
+        from unittest.mock import MagicMock
+        gen._call_model = MagicMock(return_value='{"questions": [{"question": "Q1?"}]}')
+        gen.generate(input="Write a poem", candidates=["Best poem", "Mid poem", "Worst poem"])
+        prompt = gen._call_model.call_args[0][0]
+        assert "Best poem" in prompt
+        assert "Worst poem" in prompt
+
+    def test_list_candidates_inject_candidates_rlcf(self):
+        gen = self._make_generator("Input: {input}\n{candidates}\n{format_instructions}")
+        from unittest.mock import MagicMock
+        gen._call_model = MagicMock(return_value='{"questions": [{"question": "Q1?"}]}')
+        gen.generate(input="Write a poem", candidates=["Resp A", "Resp B"])
+        prompt = gen._call_model.call_args[0][0]
+        assert "### Candidate 1" in prompt
+        assert "Resp A" in prompt
+
+    def test_dict_with_candidates_placeholder_raises(self):
+        gen = self._make_generator("Input: {input}\n{candidates}\n{format_instructions}")
+        with pytest.raises(ValueError):
+            gen.generate(input="Write a poem", candidates={"chosen": "A", "rejected": "B"})
+
+    def test_list_with_chosen_placeholder_raises(self):
+        gen = self._make_generator("Input: {input}\n{chosen}\n{rejected}\n{format_instructions}")
+        with pytest.raises(ValueError):
+            gen.generate(input="Write a poem", candidates=["A", "B"])
+
+    def test_dict_missing_keys_raises(self):
+        gen = self._make_generator("Input: {input}\n{chosen}\n{rejected}\n{format_instructions}")
+        with pytest.raises(ValueError):
+            gen.generate(input="Write a poem", candidates={"chosen": "A"})
+
+    def test_context_kwarg_injected(self):
+        gen = self._make_generator("Input: {input}\nCtx: {context}\n{chosen}\n{rejected}\n{format_instructions}")
+        from unittest.mock import MagicMock
+        gen._call_model = MagicMock(return_value='{"questions": [{"question": "Q1?"}]}')
+        gen.generate(input="Write a poem", candidates={"chosen": "A", "rejected": "B"}, context="Poetry contest")
+        prompt = gen._call_model.call_args[0][0]
+        assert "Ctx: Poetry contest" in prompt
+
+    def test_context_defaults_empty(self):
+        gen = self._make_generator("Input: {input}\nCtx: {context}\n{chosen}\n{rejected}\n{format_instructions}")
+        from unittest.mock import MagicMock
+        gen._call_model = MagicMock(return_value='{"questions": [{"question": "Q1?"}]}')
+        gen.generate(input="Write a poem", candidates={"chosen": "A", "rejected": "B"})
+        prompt = gen._call_model.call_args[0][0]
+        assert "Ctx: \n" in prompt
+
+    def test_metadata_count_dict(self):
+        gen = self._make_generator("Input: {input}\n{chosen}\n{rejected}\n{format_instructions}")
+        from unittest.mock import MagicMock
+        gen._call_model = MagicMock(return_value='{"questions": [{"question": "Q1?"}]}')
+        checklist = gen.generate(input="X", candidates={"chosen": "A", "rejected": "B"})
+        assert checklist.metadata["num_candidates"] == 2
+
+    def test_metadata_count_list(self):
+        gen = self._make_generator("Input: {input}\n{candidates}\n{format_instructions}")
+        from unittest.mock import MagicMock
+        gen._call_model = MagicMock(return_value='{"questions": [{"question": "Q1?"}]}')
+        checklist = gen.generate(input="X", candidates=["A", "B", "C"])
+        assert checklist.metadata["num_candidates"] == 3
+
+
+class TestOpenRubricsPresets:
+    def test_openrubrics_pairwise_preset_loads(self):
+        from autochecklist.generators.instance_level.contrastive import ContrastiveGenerator
+        from autochecklist.models import CategorizedChecklistResponse
+
+        gen = ContrastiveGenerator(method_name="openrubrics_pairwise")
+        assert gen.method_name == "openrubrics_pairwise"
+        assert gen._response_schema == CategorizedChecklistResponse
+        assert gen._format_name == "categorized_checklist"
+        assert gen.temperature == 0.0
+        assert gen.generate_candidates is False
+        assert gen.max_items == 15
+
+    def test_openrubrics_listwise_preset_loads(self):
+        from autochecklist.generators.instance_level.contrastive import ContrastiveGenerator
+        from autochecklist.models import CategorizedChecklistResponse
+
+        gen = ContrastiveGenerator(method_name="openrubrics_listwise")
+        assert gen.method_name == "openrubrics_listwise"
+        assert gen._response_schema == CategorizedChecklistResponse
+        assert gen.generate_candidates is False
+        assert gen.max_items == 20
+
+    def test_openrubrics_pairwise_has_correct_placeholders(self):
+        from autochecklist.generators.instance_level.contrastive import ContrastiveGenerator
+
+        gen = ContrastiveGenerator(method_name="openrubrics_pairwise")
+        placeholders = gen._template._placeholders
+        assert "input" in placeholders
+        assert "chosen" in placeholders
+        assert "rejected" in placeholders
+        assert "context" in placeholders
+        assert "format_instructions" in placeholders
+
+    def test_openrubrics_listwise_has_correct_placeholders(self):
+        from autochecklist.generators.instance_level.contrastive import ContrastiveGenerator
+
+        gen = ContrastiveGenerator(method_name="openrubrics_listwise")
+        placeholders = gen._template._placeholders
+        assert "input" in placeholders
+        assert "responses" in placeholders
+        assert "context" in placeholders
+        assert "format_instructions" in placeholders

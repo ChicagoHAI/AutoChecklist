@@ -96,11 +96,12 @@ class TestListDir:
         assert "b.txt" not in names
 
     def test_sorted_by_mtime_desc(self, tmp_path):
-        import time
+        import os
 
         (tmp_path / "old.json").write_text("{}")
-        time.sleep(0.05)
         (tmp_path / "new.json").write_text("{}")
+        os.utime(tmp_path / "old.json", (1000, 1000))
+        os.utime(tmp_path / "new.json", (2000, 2000))
         result = list_dir(tmp_path)
         assert result[0].name == "new.json"
         assert result[1].name == "old.json"

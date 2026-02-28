@@ -1,0 +1,62 @@
+name: Port Public Contributions
+
+# Runs on the PUBLIC repo when a PR is merged
+# Creates a PR on the PRIVATE repo with the same changes
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  port:
+    # Only run when PR was actually merged (not just closed)
+    # Skip PRs from the release bot (those are our own syncs)
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.user.login != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private repo
+        uses: actions/checkout@v4
+        with:
+          repository: ChicagoHAI/AutoChecklist-dev
+          token: ${{ secrets.AutoChecklist_PUBLIC_REPO_TOKEN }}
+          ref: dev
+
+      - name: Fetch and apply patch from public PR
+        env:
+          GH_TOKEN: ${{ secrets.AutoChecklist_PUBLIC_REPO_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          BRANCH="port/public-pr-${PR_NUMBER}"
+          git checkout -b "$BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Download the merge commit's diff and apply it
+          gh pr diff "$PR_NUMBER" --repo ChicagoHAI/AutoChecklist | git apply --allow-empty || {
+            echo "::warning::Patch did not apply cleanly — manual port needed"
+            exit 0
+          }
+
+          git add -A
+          git diff --staged --quiet && { echo "No changes to port"; exit 0; }
+          git commit -m "Port public PR #${PR_NUMBER}: ${PR_TITLE}"
+          git push origin "$BRANCH"
+
+          gh pr create --repo ChicagoHAI/AutoChecklist-dev \
+            --base dev --head "$BRANCH" \
+            --title "Port public PR #${PR_NUMBER}: ${PR_TITLE}" \
+            --body "$(cat <<EOF
+          Automated port of a merged public contribution.
+
+          - **Public PR:** ${PR_URL}
+          - **Author:** @${PR_AUTHOR}
+          - **Original title:** ${PR_TITLE}
+
+          Review and merge to incorporate into the next release.
+          EOF
+          )"

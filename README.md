@@ -4,11 +4,15 @@
 
 ---
 
+[![GitHub Stars](https://img.shields.io/github/stars/ChicagoHAI/AutoChecklist?style=flat-square)](https://github.com/ChicagoHAI/AutoChecklist)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg?style=flat-square)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg?style=flat-square)](LICENSE)
+
 `AutoChecklist` is an open-source library that unifies LLM-based checklist evaluation into composable pipelines, in a `pip`-installable Python package (`autochecklist`) with CLI and UI features. 
 
 ### Features
 -  **Five checklist generator abstractions** that organize methods from research by their reasoning strategies for deriving evaluation criteria
--  **Composable pipelines** eight built-in configurations implementing published methods, compatible with a unified scorer that consolidates three scoring strategies from literature
+-  **Composable pipelines** ten built-in configurations implementing published methods, compatible with a unified scorer that consolidates three scoring strategies from literature
 -  **CLI** for off-the-shelf evaluation with pre-defined pipelines
 -  **Multi-provider LLM backend** with support for OpenAI, OpenRouter, and vLLM
 -  **Locally hosted UI** allowing for interactive prompt customization, pipeline configuration, and batch evaluation
@@ -84,7 +88,7 @@ Each generator is customizable via prompt templates (`.md` files with `{input}`,
 
 ### Built-in Pipelines
 
-The library includes built-in pipelines implementing methods from research papers ([TICK](https://arxiv.org/abs/2410.03608), [RocketEval](https://arxiv.org/abs/2503.05142), [RLCF](https://arxiv.org/abs/2507.18624), [CheckEval](https://arxiv.org/abs/2403.18771), [InteractEval](https://arxiv.org/abs/2409.07355), and more). See [Supported Pipelines](docs/user-guide/supported-pipelines.md) for the full list and configuration details.
+The library includes built-in pipelines implementing methods from research papers ([TICK](https://arxiv.org/abs/2410.03608), [RocketEval](https://arxiv.org/abs/2503.05142), [RLCF](https://arxiv.org/abs/2507.18624), [OpenRubrics](https://arxiv.org/abs/2510.07743), [CheckEval](https://arxiv.org/abs/2403.18771), [InteractEval](https://arxiv.org/abs/2409.07355), and more). See [Supported Pipelines](docs/user-guide/supported-pipelines.md) for the full list and configuration details.
 
 ### Scoring
 

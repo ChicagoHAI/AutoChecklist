@@ -180,47 +180,53 @@ def _save_evaluation(results: dict, request_data: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def _run_pipeline_job(
-    pipeline_id: str,
-    request: EvaluateRequest,
-    gen_pk: dict,
-    score_pk: dict,
-) -> tuple[str, str, object | None, object | None, str | None]:
-    """Run a single pipeline config. Returns (key, pipeline_name, checklist, score, error)."""
-    from app.services.checklist import _build_pipeline_from_config, run_in_executor, score_only as _score_only
-    from typing import Any
-
+def _load_pipeline_config(pipeline_id: str) -> tuple[str, str, dict | None]:
+    """Load pipeline config. Returns (key, pipeline_name, config_data or None)."""
     config_path = DATA_DIR / "pipelines" / f"{pipeline_id}.json"
     config_data = read_json(config_path)
-    if config_data is None:
-        return pipeline_id, pipeline_id, None, None, f"Pipeline {pipeline_id} not found"
-
-    pipeline_name = config_data.get("name", pipeline_id)
+    pipeline_name = config_data.get("name", pipeline_id) if config_data else pipeline_id
     key = f"pipeline:{pipeline_id}"
+    return key, pipeline_name, config_data
 
-    try:
-        pipe = _build_pipeline_from_config(config_data, candidate_model=getattr(request, "candidate_model", None), **{**gen_pk})
-        gen_kwargs: dict[str, Any] = {"input": request.input}
-        if request.target:
-            gen_kwargs["target"] = request.target
-        if request.reference:
-            gen_kwargs["reference"] = request.reference
 
-        checklist = await run_in_executor(pipe.generate, **gen_kwargs)
+async def _pipeline_generate(
+    config_data: dict,
+    request: EvaluateRequest,
+    gen_pk: dict,
+) -> object:
+    """Generate checklist from a pipeline config. Returns library Checklist."""
+    from app.services.checklist import _build_pipeline_from_config, run_in_executor
+    from typing import Any
 
-        scorer_name = config_data.get("scorer_class", "batch")
-        custom_scorer_prompt = config_data.get("scorer_prompt") or None
-        score_result = await _score_only(
-            checklist=checklist,
-            target=request.target,
-            input=request.input,
-            scorer_name=scorer_name,
-            custom_scorer_prompt=custom_scorer_prompt,
-            **score_pk,
-        )
-        return key, pipeline_name, checklist, score_result, None
-    except Exception as e:
-        return key, pipeline_name, None, None, _extract_error_message(e)
+    pipe = _build_pipeline_from_config(config_data, candidate_model=getattr(request, "candidate_model", None), **{**gen_pk})
+    gen_kwargs: dict[str, Any] = {"input": request.input}
+    if request.target:
+        gen_kwargs["target"] = request.target
+    if request.reference:
+        gen_kwargs["reference"] = request.reference
+
+    return await run_in_executor(pipe.generate, **gen_kwargs)
+
+
+async def _pipeline_score(
+    config_data: dict,
+    checklist: object,
+    request: EvaluateRequest,
+    score_pk: dict,
+) -> object:
+    """Score a checklist using pipeline config's scorer settings."""
+    from app.services.checklist import score_only as _score_only
+
+    scorer_name = config_data.get("scorer_config") or config_data.get("scorer_class", "batch")
+    custom_scorer_prompt = config_data.get("scorer_prompt") or None
+    return await _score_only(
+        checklist=checklist,
+        target=request.target,
+        input=request.input,
+        scorer_name=scorer_name,
+        custom_scorer_prompt=custom_scorer_prompt,
+        **score_pk,
+    )
 
 
 async def _run_eval_job(
@@ -313,26 +319,46 @@ async def _run_eval_job(
                 await _write_summary()
 
     async def _run_single_pipeline(pid: str) -> None:
-        """Run a single custom pipeline, writing results."""
+        """Run a single custom pipeline, writing checklist first then score."""
         if _is_cancelled():
             return
-        key, pname, checklist, score_result, error = await _run_pipeline_job(
-            pid, request, gen_pk, score_pk,
-        )
-        if error:
-            logger.error("[%s][%s] Pipeline failed: %s", eval_id[:8], pname, error)
+
+        key, pname, config_data = _load_pipeline_config(pid)
+        if config_data is None:
+            logger.error("[%s][%s] Pipeline not found", eval_id[:8], pname)
             async with lock:
-                all_results[key] = {"error": error, "pipeline_name": pname}
+                all_results[key] = {"error": f"Pipeline {pid} not found", "pipeline_name": pname}
                 completed.append(key)
                 await _write_summary()
-        else:
+            return
+
+        try:
+            # Generate checklist
+            checklist = await _pipeline_generate(config_data, request, gen_pk)
             converted_cl = _convert_lib_checklist(checklist, key)
+            logger.info("[%s][%s] Pipeline generated %d items", eval_id[:8], pname, len(converted_cl.items))
+
+            # Write checklist immediately so frontend can show it
+            async with lock:
+                all_results[key] = {
+                    "checklist": converted_cl.model_dump(),
+                    "score": None,
+                    "pipeline_name": pname,
+                }
+                await _write_summary()
+
+            if _is_cancelled():
+                return
+
+            # Score it
+            score_result = await _pipeline_score(config_data, checklist, request, score_pk)
             converted_score = _convert_lib_score(score_result, converted_cl.items)
             for i, item_res in enumerate(converted_score.item_results):
                 if i < len(converted_cl.items):
                     converted_cl.items[i].passed = item_res.get("passed")
                     converted_cl.items[i].confidence = item_res.get("confidence")
                     converted_cl.items[i].reasoning = item_res.get("reasoning")
+
             async with lock:
                 all_results[key] = {
                     "checklist": converted_cl.model_dump(),
@@ -342,6 +368,15 @@ async def _run_eval_job(
                 completed.append(key)
                 await _write_summary()
             logger.info("[%s][%s] Pipeline score: %.0f%%", eval_id[:8], pname, converted_score.percentage)
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            msg = _extract_error_message(e)
+            logger.error("[%s][%s] Pipeline failed: %s", eval_id[:8], pname, msg)
+            async with lock:
+                all_results[key] = {"error": msg, "pipeline_name": pname}
+                completed.append(key)
+                await _write_summary()
 
     try:
         # Launch all methods and pipelines concurrently
@@ -593,17 +628,25 @@ async def evaluate_stream(request: EvaluateRequest):
             elif score_result:
                 yield f"event: score\ndata: {json.dumps({'method': method, 'score': score_result.model_dump(), 'items': scored_items})}\n\n"
 
-        # Phase 3: custom pipelines (sequential, each emits checklist + score)
+        # Phase 3: custom pipelines (sequential, each emits checklist then score)
         pipeline_ids = getattr(request, "pipeline_ids", None) or []
         for pid in pipeline_ids:
-            key, pname, checklist, score_result, error = await _run_pipeline_job(
-                pid, request, gen_pk, score_pk,
-            )
-            if error:
-                yield f"event: error\ndata: {json.dumps({'method': key, 'phase': 'checklist', 'error': error, 'pipeline_name': pname})}\n\n"
-            else:
-                converted_cl = _convert_lib_checklist(checklist, key)
-                yield f"event: checklist\ndata: {json.dumps({'method': key, 'checklist': converted_cl.model_dump(), 'pipeline_name': pname})}\n\n"
+            key, pname, config_data = _load_pipeline_config(pid)
+            if config_data is None:
+                yield f"event: error\ndata: {json.dumps({'method': key, 'phase': 'checklist', 'error': f'Pipeline {pid} not found', 'pipeline_name': pname})}\n\n"
+                continue
+
+            try:
+                checklist = await _pipeline_generate(config_data, request, gen_pk)
+            except Exception as e:
+                yield f"event: error\ndata: {json.dumps({'method': key, 'phase': 'checklist', 'error': _extract_error_message(e), 'pipeline_name': pname})}\n\n"
+                continue
+
+            converted_cl = _convert_lib_checklist(checklist, key)
+            yield f"event: checklist\ndata: {json.dumps({'method': key, 'checklist': converted_cl.model_dump(), 'pipeline_name': pname})}\n\n"
+
+            try:
+                score_result = await _pipeline_score(config_data, checklist, request, score_pk)
                 converted_score = _convert_lib_score(score_result, converted_cl.items)
                 for i, item_res in enumerate(converted_score.item_results):
                     if i < len(converted_cl.items):
@@ -616,6 +659,8 @@ async def evaluate_stream(request: EvaluateRequest):
                     "pipeline_name": pname,
                 }
                 yield f"event: score\ndata: {json.dumps({'method': key, 'score': converted_score.model_dump(), 'items': converted_score.item_results, 'pipeline_name': pname})}\n\n"
+            except Exception as e:
+                yield f"event: error\ndata: {json.dumps({'method': key, 'phase': 'score', 'error': _extract_error_message(e), 'pipeline_name': pname})}\n\n"
 
         # Save results
         _save_evaluation(

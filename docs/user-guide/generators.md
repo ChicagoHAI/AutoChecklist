@@ -6,9 +6,9 @@ A **generator** is the first stage of the checklist evaluation pipeline. It take
 
 For example, given the instruction *"Write a haiku about autumn"*, a generator might produce:
 
-- Does the response follow the 5-7-5 syllable structure?
-- Does the response relate to autumn themes?
-- Does the response use concrete imagery?
+- [ ] Does the response follow the 5-7-5 syllable structure?
+- [ ] Does the response relate to autumn themes?
+- [ ] Does the response use concrete imagery?
 
 These questions become the criteria against which a [scorer](scorers.md) later evaluates a target response.
 
@@ -22,7 +22,7 @@ Instance-level generators create a tailored checklist for each individual input.
 
 - **`DirectGenerator`** — *Direct inference*: The LLM reads a prompt template with the evaluation context and directly produces checklist questions. Different prompt templates (via [built-in pipelines](supported-pipelines.md)) specialize it for different methods: `tick`, `rocketeval`, `rlcf_direct`.
 
-- **`ContrastiveGenerator`** — *Counterfactual reasoning*: Instead of generating criteria directly, this approach first generates candidate responses of varying quality, then derives criteria by analyzing what distinguishes good from bad responses. The contrast between candidates reveals evaluation dimensions that direct prompting might miss. Used by `rlcf_candidate` and `rlcf_candidates_only` pipelines.
+- **`ContrastiveGenerator`** — *Counterfactual reasoning*: Derives criteria by analyzing what distinguishes good from bad responses. Can auto-generate candidate responses of varying quality (RLCF pipelines), or work with externally provided preference data like chosen/rejected pairs or ranked lists (OpenRubrics CRG pipelines). Used by `rlcf_candidate`, `rlcf_candidates_only`, `openrubrics_pairwise`, and `openrubrics_listwise` pipelines.
 
 ### Corpus-Level: One Checklist Per Dataset
 
@@ -107,7 +107,7 @@ pipe = pipeline("rlcf_candidate", generator_model="openai/gpt-5-mini",
 
 **Use multiple models for diverse candidates** (paper-faithful approach):
 
-The original RLCF paper generates candidates using different "worker" models to get naturally diverse responses. To replicate this, instantiate the generator directly and pass it to `ChecklistPipeline`:
+Candidates can be generated using different "worker" models to get naturally diverse responses. To replicate this, instantiate the generator directly and pass it to `ChecklistPipeline`:
 
 ```python
 from autochecklist import ContrastiveGenerator, ChecklistPipeline
@@ -128,6 +128,35 @@ result = pipe(input="...", target="...", reference="...")
     - **Single model** (convenience fallback): Generates `num_candidates` responses (default 4) at **temperature 0.9**. Diversity comes from high-temperature sampling.
 
     When using `pipeline()` with `generator_kwargs={"candidate_provider": ...}`, a single model is used. For multi-model candidates, instantiate `ContrastiveGenerator` directly and pass it to `ChecklistPipeline`.
+
+### ContrastiveGenerator: OpenRubrics CRG (Preference Data)
+
+The OpenRubrics pipelines use `ContrastiveGenerator` with `generate_candidates=False` — instead of auto-generating candidates, you provide preference data directly:
+
+**Pairwise** — chosen vs rejected:
+
+```python
+pipe = pipeline("openrubrics_pairwise", generator_model="openai/gpt-5-mini", scorer_model="openai/gpt-5-mini")
+result = pipe(
+    input="Explain photosynthesis.",
+    target="Response to evaluate...",
+    candidates={"chosen": "Photosynthesis is the process by which plants convert...",
+                "rejected": "Plants use sunlight to grow."},
+)
+```
+
+**Listwise** — ranked responses (best to worst):
+
+```python
+pipe = pipeline("openrubrics_listwise", generator_model="openai/gpt-5-mini", scorer_model="openai/gpt-5-mini")
+result = pipe(
+    input="Explain photosynthesis.",
+    target="Response to evaluate...",
+    candidates=["Best response...", "Good response...", "Weak response..."],
+)
+```
+
+Items are categorized as `hard_rule` or `principle` — use `checklist.by_category()` to split them.
 
 See [Supported Pipelines](supported-pipelines.md) for full details on each method's inputs and behavior.
 

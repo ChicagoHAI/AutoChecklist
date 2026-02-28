@@ -276,6 +276,16 @@ class WeightedChecklistResponse(BaseModel):
     questions: List[GeneratedWeightedQuestion]
 
 
+class GeneratedCategorizedQuestion(GeneratedQuestion):
+    """A generated yes/no question with a category label."""
+    category: str
+
+
+class CategorizedChecklistResponse(BaseModel):
+    """LLM response schema for categorized checklist generation (OpenRubrics CRG)."""
+    questions: List[GeneratedCategorizedQuestion]
+
+
 class BatchAnswerItem(BaseModel):
     """A single answer in batch scoring (1-based question index)."""
     question_index: int

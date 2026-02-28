@@ -1,8 +1,27 @@
 # Quick Start
 
-## Custom Prompts
+This page shows the fastest path to a working evaluation.
 
-The primary way to use `autochecklist` — write a prompt template for your task and generate a checklist:
+## 1) End-to-End in 10 Lines
+
+Use `pipeline()` to generate a checklist and score a response in one call:
+
+```python
+from autochecklist import pipeline
+
+pipe = pipeline("tick", generator_model="openai/gpt-5-mini", scorer_model="openai/gpt-5-mini")
+result = pipe(
+    input="Write a haiku about autumn.",
+    target="Leaves drift through cool dusk; amber fields breathe into night; geese stitch quiet skies.",
+)
+print(f"Pass rate: {result.pass_rate:.0%}")
+```
+
+See [Supported Pipelines](../user-guide/supported-pipelines.md) for other built-ins.
+
+## 2) Custom Prompt (No Preset Needed)
+
+If you want your own criteria style, pass a prompt directly:
 
 ```python
 from autochecklist import DirectGenerator, ChecklistScorer
@@ -18,7 +37,7 @@ score = scorer.score(checklist, target="Leaves fall gently down...")
 print(f"Pass rate: {score.pass_rate:.0%}")
 ```
 
-## From a File
+## 3) Load Prompt from File
 
 Load a prompt template from a `.md` file:
 
@@ -34,9 +53,7 @@ checklist = gen.generate(input="Write a haiku about autumn.")
 
 See [Custom Prompts](../user-guide/custom-prompts.md) for the full guide (placeholders, custom scorers, registration).
 
-## Using Built-in Pipelines
-
-The library includes named pipelines that implement methods from research papers. Use them via `method_name`:
+## 4) Use a Built-In Method via Generator + Scorer
 
 ```python
 from autochecklist import DirectGenerator, ChecklistScorer
@@ -49,9 +66,7 @@ score = scorer.score(checklist, target="Leaves fall gently down...")
 print(f"Pass rate: {score.pass_rate:.0%}")
 ```
 
-See [Supported Pipelines](../user-guide/supported-pipelines.md) for the full list.
-
-## Pipeline API
+## 5) Pipeline API (Same Result, Less Wiring)
 
 For convenience, `pipeline()` creates a pre-configured generator + scorer from a pipeline name:
 
@@ -65,7 +80,7 @@ print(f"Pass rate: {result.pass_rate:.0%}")
 
 See the [Pipeline Guide](../user-guide/pipeline.md) for composition, providers, and the full API.
 
-## Batch Evaluation
+## 6) Batch Evaluation
 
 ```python
 data = [

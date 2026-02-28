@@ -18,16 +18,7 @@ jobs:
       - name: Push to docs repo
         run: |
           git clone https://x-access-token:${{ secrets.AutoChecklist_DOCS_PAT }}@github.com/autochecklist/autochecklist.github.io.git docs-repo
-          # Clean old root-level docs (keep .git, docs/, and root index.html redirect)
-          cd docs-repo
-          find . -maxdepth 1 -not -name '.git' -not -name '.' -not -name 'docs' -not -name 'CNAME' -exec rm -rf {} +
-          # Add redirect from root to /docs/
-          cat > index.html << 'REDIRECT'
-          <!DOCTYPE html>
-          <html><head><meta http-equiv="refresh" content="0; url=docs/"></head></html>
-          REDIRECT
-          cd ..
-          # Deploy docs to /docs/ subdirectory
+          # Only replace /docs/ — leave root-level files (homepage, CNAME, etc.) untouched
           mkdir -p docs-repo/docs
           rm -rf docs-repo/docs/*
           cp -r site/* docs-repo/docs/

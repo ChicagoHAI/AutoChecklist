@@ -7,8 +7,8 @@ Test suite for `autochecklist` (core library).
 ## Scope
 
 - Path: `tests/`
-- Current size: `538` collected tests
-- Fast/default subset: `465` tests (`-m 'not integration and not vllm_offline and not openai_api'`)
+- Current size: `554` collected tests
+- Fast/default subset: `481` tests (`-m 'not integration and not vllm_offline and not openai_api'`)
 - Optional integration subset: `73` tests (real APIs / offline inference)
 
 This repo also has a separate backend suite in `ui/backend/tests/`.

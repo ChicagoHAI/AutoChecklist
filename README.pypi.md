@@ -1,5 +1,9 @@
 # AutoChecklist
 
+[![GitHub Stars](https://img.shields.io/github/stars/ChicagoHAI/AutoChecklist?style=flat-square)](https://github.com/ChicagoHAI/AutoChecklist)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg?style=flat-square)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg?style=flat-square)](LICENSE)
+
 A library of composable pipelines for generating and scoring checklist criteria.
 
 A **checklist** is a list of yes/no questions used. `autochecklist` provides **5 generator abstractions**, each representing a different reasoning approach to producing evaluation criteria, along with a configurable **`ChecklistScorer`** that consolidates three scoring strategies from literature. You can mix, extend, and customize all components.

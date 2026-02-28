@@ -185,6 +185,20 @@ def cmd_list(args: argparse.Namespace) -> None:
             print(f"{r['name']:<20} {r.get('description', '')}")
 
 
+def cmd_ui(args: argparse.Namespace) -> None:
+    """Launch the AutoChecklist UI."""
+    import os
+    import subprocess
+
+    repo_root = Path(__file__).resolve().parent.parent
+    cmd = [str(repo_root / "ui" / "launch_ui.sh")]
+    if args.dev:
+        cmd.append("--dev")
+
+    os.chdir(repo_root / "ui")
+    subprocess.run(cmd)
+
+
 def _add_provider_flags(parser: argparse.ArgumentParser) -> None:
     """Add provider/model flags shared across subcommands."""
     parser.add_argument(
@@ -265,6 +279,14 @@ def main(argv: list[str] | None = None) -> None:
         help="Component type to list (default: generators)",
     )
     list_parser.set_defaults(func=cmd_list)
+
+    # --- ui (only available in source checkout) ---
+    pkg_dir = Path(__file__).resolve().parent
+    ui_script = pkg_dir.parent / "ui" / "launch_ui.sh"
+    if ui_script.exists():
+        ui_parser = subparsers.add_parser("ui", help="Launch the AutoChecklist UI")
+        ui_parser.add_argument("--dev", action="store_true", help="Run in development mode (hot-reload)")
+        ui_parser.set_defaults(func=cmd_ui)
 
     args = parser.parse_args(argv)
     args.func(args)

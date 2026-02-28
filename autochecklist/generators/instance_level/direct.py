@@ -162,6 +162,7 @@ class DirectGenerator(InstanceChecklistGenerator):
                 ChecklistItem(
                     question=q.question,
                     weight=getattr(q, "weight", 100.0),
+                    category=getattr(q, "category", None),
                 )
             )
         return items

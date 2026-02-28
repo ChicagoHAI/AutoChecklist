@@ -856,7 +856,7 @@ class ChecklistPipeline:
                 inp = item.get("input", "")
                 tgt = item.get("target", "")
 
-                cl = self.generate(input=inp)
+                cl = self.generate(input=inp, **{k: v for k, v in item.items() if k not in ("input", "target")})
                 checklists[i] = cl
                 if gen_pbar:
                     gen_pbar.update(1)
