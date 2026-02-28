@@ -1,0 +1,20 @@
+name: Tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv python install ${{ matrix.python-version }}
+      - run: uv sync --dev --extra dev
+      - run: uv run ruff check autochecklist/
+      - run: uv run pytest -v -m "not integration and not vllm_offline and not openai_api"

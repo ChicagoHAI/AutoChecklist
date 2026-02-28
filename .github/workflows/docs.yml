@@ -1,0 +1,30 @@
+name: Deploy Docs
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**", "mkdocs.yml"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv python install 3.12
+      - run: uv sync --extra docs
+      - run: uv run mkdocs build
+
+      - name: Push to docs repo
+        run: |
+          git clone https://x-access-token:${{ secrets.AutoChecklist_DOCS_PAT }}@github.com/autochecklist/autochecklist.github.io.git docs-repo
+          # Only replace /docs/ — leave root-level files (homepage, CNAME, etc.) untouched
+          mkdir -p docs-repo/docs
+          rm -rf docs-repo/docs/*
+          cp -r site/* docs-repo/docs/
+          cd docs-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "Deploy docs from AutoChecklist@${{ github.sha }}"
+          git push

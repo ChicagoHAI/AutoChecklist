@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+:root {
+  /* === Warm Paper Palette === */
+
+  /* Surfaces */
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-elevated: #fafafa;
+  --surface-manila: #eeeeee;
+  --surface-manila-dark: #d9d9d9;
+
+  /* Text & borders */
+  --text-primary: #1a1a1e;
+  --text-secondary: #52525b;
+  --text-tertiary: #71717a;
+  --border: rgba(26, 26, 30, 0.12);
+  --border-strong: rgba(26, 26, 30, 0.25);
+
+  /* UChicago Maroon accent */
+  --accent-primary: #800000;
+  --accent-primary-hover: #600000;
+  --accent-light: #FDF2F2;
+  --accent-secondary: #A51C30;
+
+  /* Status colors */
+  --success: #16A34A;
+  --success-light: #F0FDF4;
+  --error: #DC2626;
+  --error-light: #FEF2F2;
+  --warning: #D97706;
+  --warning-light: #FFFBEB;
+
+  /* Soft shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  /* Typography — Inconsolata (body/headings) + Space Mono (data/labels) */
+  --font-sans: var(--font-inconsolata), 'Courier New', monospace;
+  --font-serif: var(--font-inconsolata), 'Courier New', monospace;
+  --font-mono: var(--font-space-mono), 'Courier New', monospace;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+/* Monospace heading hierarchy — weight and tracking create contrast */
+h1, h2, h3 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+/* Monospace for technical content */
+code, pre, .font-mono {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+/* Clean horizontal rule */
+hr {
+  border: none;
+  height: 1px;
+  background: var(--border);
+  margin: 1.5rem 0;
+}
+
+/* Selection styling */
+::selection {
+  background-color: rgba(128, 0, 0, 0.15);
+  color: var(--text-primary);
+}
+
+/* Scrollbar styling - warm tones */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-manila);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-manila-dark);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions globally */
+*, *::before, *::after {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+/* === Utility Classes === */
+
+/* Button press animation */
+.btn-press {
+  box-shadow: var(--shadow-sm);
+}
+.btn-press:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+.btn-press:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* Uppercase mono labels */
+.micro-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Skeleton animation */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
