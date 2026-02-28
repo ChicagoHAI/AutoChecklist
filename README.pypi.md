@@ -1,8 +1,11 @@
 # AutoChecklist
 
-[![GitHub Stars](https://img.shields.io/github/stars/ChicagoHAI/AutoChecklist?style=flat-square)](https://github.com/ChicagoHAI/AutoChecklist)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg?style=flat-square)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg?style=flat-square)](LICENSE)
+<p align="center">
+  <a href="https://github.com/ChicagoHAI/AutoChecklist"><img src="https://img.shields.io/github/stars/ChicagoHAI/AutoChecklist?style=flat-square" alt="GitHub Stars"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=flat-square" alt="Python 3.10+"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-green.svg?style=flat-square" alt="License"></a>
+  <a href="https://autochecklist.github.io/"><img src="https://img.shields.io/badge/site-autochecklist.github.io-purple?style=flat-square" alt="Site"></a>
+</p>
 
 A library of composable pipelines for generating and scoring checklist criteria.
 
@@ -33,7 +36,7 @@ Each generator is customizable via prompt templates (`.md` files with `{input}`,
 
 ### Built-in Pipelines
 
-The library includes built-in pipelines implementing methods from research papers ([TICK](https://arxiv.org/abs/2410.03608), [RocketEval](https://arxiv.org/abs/2503.05142), [RLCF](https://arxiv.org/abs/2507.18624), [CheckEval](https://arxiv.org/abs/2403.18771), [InteractEval](https://arxiv.org/abs/2409.07355), and more). See [Supported Pipelines](https://github.com/ChicagoHAI/AutoChecklist/blob/main/docs/user-guide/pipelines.md) for the full list and configuration details.
+The library includes built-in pipelines implementing methods from research papers ([TICK](https://arxiv.org/abs/2410.03608), [RocketEval](https://arxiv.org/abs/2503.05142), [RLCF](https://arxiv.org/abs/2507.18624), [OpenRubrics](https://arxiv.org/abs/2510.07743), [CheckEval](https://arxiv.org/abs/2403.18771), [InteractEval](https://arxiv.org/abs/2409.07355), and more). See [Supported Pipelines](https://autochecklist.github.io/user-guide/supported-pipelines/) for the full list and configuration details.
 
 ### Scoring
 
@@ -78,114 +81,30 @@ pip install "autochecklist[all]"
 
 For development installation from source, see the [GitHub repository](https://github.com/ChicagoHAI/AutoChecklist).
 
-## Using the Package
-
-### Custom Prompts
-
-Write a prompt template and generate a checklist:
-
-```python
-from autochecklist import DirectGenerator, ChecklistScorer
-
-gen = DirectGenerator(
-    custom_prompt="You are an expert evaluator. Generate yes/no checklist questions to score:\n\n{input}",
-    model="openai/gpt-5-mini",
-)
-checklist = gen.generate(input="Write a haiku about autumn.")
-
-scorer = ChecklistScorer(mode="batch", model="openai/gpt-5-mini")
-score = scorer.score(checklist, target="Leaves fall gently down...")
-print(f"Pass rate: {score.pass_rate:.0%}")
-```
-
-Scorers also take custom prompts. Prompts can also be loaded from `.md` files — see [Custom Prompts](https://github.com/ChicagoHAI/AutoChecklist/blob/main/docs/user-guide/custom-prompts.md) for the full guide (placeholders, custom scorers, registration).
-
-### Custom Pipelines
-
-Register a custom pipeline (generator + scorer + prompts) as a reusable unit:
-
-```python
-from autochecklist import register_custom_pipeline, pipeline
-
-# Register from config
-register_custom_pipeline(
-    "my_eval",
-    generator_prompt="Generate yes/no questions for:\n\n{input}",
-    scorer="weighted",
-)
-pipe = pipeline("my_eval", generator_model="openai/gpt-5-mini")
-
-# Or register from an existing pipeline instance
-register_custom_pipeline("my_eval_v2", pipe)
-
-# Save/load pipeline configs as JSON
-from autochecklist import save_pipeline_config, load_pipeline_config
-save_pipeline_config("my_eval", "my_eval.json")
-load_pipeline_config("my_eval.json")  # registers and returns the name
-```
-
-### Built-in Pipelines
-
-The library includes pipelines implementing methods from research papers. Use them via `method_name` or the `pipeline()` shorthand:
+## Quick Start
 
 ```python
 from autochecklist import pipeline
 
 pipe = pipeline("tick", generator_model="openai/gpt-5-mini", scorer_model="openai/gpt-5-mini")
-result = pipe(input="Write a haiku about autumn", target="Leaves fall gently...")
+result = pipe(input="Write a haiku about autumn.", target="Leaves fall gently down...")
 print(f"Pass rate: {result.pass_rate:.0%}")
 ```
 
-See [Supported Pipelines](https://github.com/ChicagoHAI/AutoChecklist/blob/main/docs/user-guide/pipelines.md) for the full list of pipelines, paper details, and configuration options.
+See the [Quick Start guide](https://autochecklist.github.io/getting-started/quickstart/) for custom prompts, batch evaluation, and more.
 
-### Batch Evaluation
-
-```python
-data = [
-    {"input": "Write a haiku", "target": "Leaves fall..."},
-    {"input": "Write a limerick", "target": "There once was..."},
-]
-result = pipe.run_batch(data, show_progress=True)
-print(f"Macro pass rate: {result.macro_pass_rate:.0%}")
-```
-
-For pipeline composition, provider configuration, and the full API, see the [Pipeline Guide](https://github.com/ChicagoHAI/AutoChecklist/blob/main/docs/user-guide/pipeline.md).
-
-### Command-Line Interface
-
-Run evaluations directly from the terminal:
+### CLI
 
 ```bash
-# Full evaluation (generate + score)
 autochecklist run --pipeline tick --data eval_data.jsonl -o results.jsonl \
   --generator-model openai/gpt-4o-mini --scorer-model openai/gpt-4o-mini
-
-# Generate checklists only
-autochecklist generate --pipeline tick --data inputs.jsonl -o checklists.jsonl \
-  --generator-model openai/gpt-4o-mini
-
-# Score with existing checklist
-autochecklist score --data eval_data.jsonl --checklist checklist.json \
-  -o results.jsonl --scorer-model openai/gpt-4o-mini
-
-# List available pipelines
-autochecklist list
 ```
 
-API keys can be set via `--api-key`, environment variables (`OPENROUTER_API_KEY`), or a `.env` file. See the [CLI Guide](https://github.com/ChicagoHAI/AutoChecklist/blob/main/docs/user-guide/cli.md) for full details.
-
-### Examples
-
-Detailed examples with runnable code:
-
-- **[custom_components_tutorial.ipynb](https://github.com/ChicagoHAI/AutoChecklist/blob/main/examples/custom_components_tutorial.ipynb)** - Create your own generators, scorers, and refiners
-- **[pipeline_demo.ipynb](https://github.com/ChicagoHAI/AutoChecklist/blob/main/examples/pipeline_demo.ipynb)** - Pipeline API, registry, batch evaluation, export
-- **[instance_level_demo.ipynb](https://github.com/ChicagoHAI/AutoChecklist/blob/main/examples/instance_level_demo.ipynb)** - DirectGenerator, ContrastiveGenerator (per-input checklists)
-- **[corpus_level_demo.ipynb](https://github.com/ChicagoHAI/AutoChecklist/blob/main/examples/corpus_level_demo.ipynb)** - InductiveGenerator, DeductiveGenerator, InteractiveGenerator (per-dataset checklists)
+See the [CLI guide](https://autochecklist.github.io/user-guide/cli/) for all commands.
 
 ## Links
 
-<!-- - [Full Documentation](https://autochecklist.github.io) -->
+- [Documentation](https://autochecklist.github.io)
 - [GitHub Repository](https://github.com/ChicagoHAI/AutoChecklist) — contributing, UI, dev setup
 - [Bug Tracker](https://github.com/ChicagoHAI/AutoChecklist/issues)
 

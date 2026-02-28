@@ -185,12 +185,27 @@ def cmd_list(args: argparse.Namespace) -> None:
             print(f"{r['name']:<20} {r.get('description', '')}")
 
 
+def _find_repo_root() -> Path | None:
+    """Find the repo root by walking up from the package dir."""
+    _dir = Path(__file__).resolve().parent
+    for _ in range(5):
+        _dir = _dir.parent
+        if (_dir / "ui" / "launch_ui.sh").exists() and (_dir / "pyproject.toml").exists():
+            return _dir
+    return None
+
+
 def cmd_ui(args: argparse.Namespace) -> None:
     """Launch the AutoChecklist UI."""
     import os
     import subprocess
 
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = _find_repo_root()
+    if repo_root is None:
+        print("Error: could not find AutoChecklist source tree. "
+              "The 'ui' command is only available from a source checkout.", file=sys.stderr)
+        sys.exit(1)
+
     cmd = [str(repo_root / "ui" / "launch_ui.sh")]
     if args.dev:
         cmd.append("--dev")
@@ -281,9 +296,7 @@ def main(argv: list[str] | None = None) -> None:
     list_parser.set_defaults(func=cmd_list)
 
     # --- ui (only available in source checkout) ---
-    pkg_dir = Path(__file__).resolve().parent
-    ui_script = pkg_dir.parent / "ui" / "launch_ui.sh"
-    if ui_script.exists():
+    if _find_repo_root() is not None:
         ui_parser = subparsers.add_parser("ui", help="Launch the AutoChecklist UI")
         ui_parser.add_argument("--dev", action="store_true", help="Run in development mode (hot-reload)")
         ui_parser.set_defaults(func=cmd_ui)

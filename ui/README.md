@@ -26,23 +26,19 @@ Web interface for the autochecklist library, providing checklist-based LLM evalu
 
 ## Quick Start
 
-### Production (default)
+From the repo root:
 
 ```bash
-cd ui
-./launch_ui.sh
+autochecklist ui          # production mode
+autochecklist ui --dev    # development mode (hot-reload)
 ```
 
-Builds the frontend and starts both services in production mode.
-
-### Development (with hot-reload)
+Or equivalently:
 
 ```bash
-cd ui
-./launch_ui.sh --dev
+cd ui && ./launch_ui.sh         # production
+cd ui && ./launch_ui.sh --dev   # development
 ```
-
-Starts both services with hot-reload (auto-reloads on Python/TS changes).
 
 ### Environment Variables
 

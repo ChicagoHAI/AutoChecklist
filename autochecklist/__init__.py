@@ -49,7 +49,8 @@ from .registry import (
     list_refiners_with_info,
 )
 
-__version__ = "0.1.0"
+from importlib.metadata import version as _pkg_version
+__version__ = _pkg_version("autochecklist")
 
 __all__ = [
     # Models
@@ -63,6 +64,10 @@ __all__ = [
     "DeductiveInput",
     "FeedbackInput",
     "InteractiveInput",
+    "ChecklistResponse",
+    "WeightedChecklistResponse",
+    "CategorizedChecklistResponse",
+    "GeneratedCategorizedQuestion",
     # Config
     "configure",
     "get_config",

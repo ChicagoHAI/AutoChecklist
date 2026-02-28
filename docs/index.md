@@ -3,6 +3,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/ChicagoHAI/AutoChecklist?style=flat-square)](https://github.com/ChicagoHAI/AutoChecklist)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg?style=flat-square)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg?style=flat-square)](LICENSE)
+[![Site](https://img.shields.io/badge/site-autochecklist.github.io-purple?style=flat-square)](https://autochecklist.github.io/)
 
 `AutoChecklist` is an open-source library that unifies LLM-based checklist evaluation into composable pipelines, in a `pip`-installable Python package (`autochecklist`) with CLI and UI features.
 

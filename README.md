@@ -4,11 +4,18 @@
 
 ---
 
-[![GitHub Stars](https://img.shields.io/github/stars/ChicagoHAI/AutoChecklist?style=flat-square)](https://github.com/ChicagoHAI/AutoChecklist)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg?style=flat-square)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg?style=flat-square)](LICENSE)
+<p align="center">
+  <a href="https://github.com/ChicagoHAI/AutoChecklist"><img src="https://img.shields.io/github/stars/ChicagoHAI/AutoChecklist?style=flat-square" alt="GitHub Stars"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=flat-square" alt="Python 3.10+"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-green.svg?style=flat-square" alt="License"></a>
+  <a href="https://autochecklist.github.io/"><img src="https://img.shields.io/badge/site-autochecklist.github.io-purple?style=flat-square" alt="Site"></a>
+</p>
 
-`AutoChecklist` is an open-source library that unifies LLM-based checklist evaluation into composable pipelines, in a `pip`-installable Python package (`autochecklist`) with CLI and UI features. 
+`AutoChecklist` is an open-source library that unifies LLM-based checklist evaluation into composable pipelines, in a `pip`-installable Python package (`autochecklist`) with CLI and UI features.
+
+<p align="center">
+  <img src="docs/frames.gif" alt="AutoChecklist demo" width="700">
+</p>
 
 ### Features
 -  **Five checklist generator abstractions** that organize methods from research by their reasoning strategies for deriving evaluation criteria
@@ -114,123 +121,38 @@ Refiners are pipeline stages that clean up raw checklists before scoring. They'r
 
 
 
-## Using the Package
-
-### Custom Prompts
-
-Write a prompt template and generate a checklist:
-
-```python
-from autochecklist import DirectGenerator, ChecklistScorer
-
-gen = DirectGenerator(
-    custom_prompt="You are an expert evaluator. Generate yes/no checklist questions to score:\n\n{input}",
-    model="openai/gpt-5-mini",
-)
-checklist = gen.generate(input="Write a haiku about autumn.")
-
-scorer = ChecklistScorer(mode="batch", model="openai/gpt-5-mini")
-score = scorer.score(checklist, target="Leaves fall gently down...")
-print(f"Pass rate: {score.pass_rate:.0%}")
-```
-
-Scorers also take custom prompts. Prompts can also be loaded from `.md` files — see [Custom Prompts](docs/user-guide/custom-prompts.md) for the full guide (placeholders, custom scorers, registration).
-
-### Custom Pipelines
-
-Register a custom pipeline (generator + scorer + prompts) as a reusable unit:
-
-```python
-from autochecklist import register_custom_pipeline, pipeline
-
-# Register from config
-register_custom_pipeline(
-    "my_eval",
-    generator_prompt="Generate yes/no questions for:\n\n{input}",
-    scorer="weighted",
-)
-pipe = pipeline("my_eval", generator_model="openai/gpt-5-mini")
-
-# Or register from an existing pipeline instance
-register_custom_pipeline("my_eval_v2", pipe)
-
-# Save/load pipeline configs as JSON
-from autochecklist import save_pipeline_config, load_pipeline_config
-save_pipeline_config("my_eval", "my_eval.json")
-load_pipeline_config("my_eval.json")  # registers and returns the name
-```
-
-### Built-in Pipelines
-
-The library includes pipelines implementing methods from research papers. Use them via `method_name` or the `pipeline()` shorthand:
+## Quick Start
 
 ```python
 from autochecklist import pipeline
 
 pipe = pipeline("tick", generator_model="openai/gpt-5-mini", scorer_model="openai/gpt-5-mini")
-result = pipe(input="Write a haiku about autumn", target="Leaves fall gently...")
+result = pipe(input="Write a haiku about autumn.", target="Leaves fall gently down...")
 print(f"Pass rate: {result.pass_rate:.0%}")
 ```
 
-See [Supported Pipelines](docs/user-guide/supported-pipelines.md) for the full list of pipelines, paper details, and configuration options.
+See the [Quick Start guide](https://autochecklist.github.io/getting-started/quickstart/) for custom prompts, batch evaluation, and more.
 
-### Batch Evaluation
-
-```python
-data = [
-    {"input": "Write a haiku", "target": "Leaves fall..."},
-    {"input": "Write a limerick", "target": "There once was..."},
-]
-result = pipe.run_batch(data, show_progress=True)
-print(f"Macro pass rate: {result.macro_pass_rate:.0%}")
-```
-
-For pipeline composition, provider configuration, and the full API, see the [Pipeline Guide](docs/user-guide/pipeline.md).
-
-### Command-Line Interface
-
-Run evaluations directly from the terminal:
+### CLI
 
 ```bash
-# Full evaluation (generate + score)
 autochecklist run --pipeline tick --data eval_data.jsonl -o results.jsonl \
   --generator-model openai/gpt-4o-mini --scorer-model openai/gpt-4o-mini
-
-# Generate checklists only
-autochecklist generate --pipeline tick --data inputs.jsonl -o checklists.jsonl \
-  --generator-model openai/gpt-4o-mini
-
-# Score with existing checklist
-autochecklist score --data eval_data.jsonl --checklist checklist.json \
-  -o results.jsonl --scorer-model openai/gpt-4o-mini
-
-# List available pipelines
-autochecklist list
 ```
 
-API keys can be set via `--api-key`, environment variables (`OPENROUTER_API_KEY`), or a `.env` file. See the [CLI Guide](docs/user-guide/cli.md) for full details.
-
-### Examples
-
-Detailed examples with runnable code:
-
-- **[custom_components_tutorial.ipynb](examples/custom_components_tutorial.ipynb)** - Create your own generators, scorers, and refiners
-- **[pipeline_demo.ipynb](examples/pipeline_demo.ipynb)** - Pipeline API, registry, batch evaluation, export
-- **[instance_level_demo.ipynb](examples/instance_level_demo.ipynb)** - DirectGenerator, ContrastiveGenerator (per-input checklists)
-- **[corpus_level_demo.ipynb](examples/corpus_level_demo.ipynb)** - InductiveGenerator, DeductiveGenerator, InteractiveGenerator (per-dataset checklists)
+See the [CLI guide](https://autochecklist.github.io/user-guide/cli/) for all commands.
 
 
 ## UI
 
 A web interface for demonstrating `autochecklist` methods. See [ui/README.md](ui/README.md) for details.
 
-**Quick Start:**
 ```bash
-cd ui
-./launch_ui.sh
-# Frontend: http://localhost:7860
-# Backend:  http://localhost:7861
+autochecklist ui          # or: cd ui && ./launch_ui.sh
+autochecklist ui --dev    # development mode (hot-reload)
 ```
+
+> The `ui` subcommand is only available from a source checkout.
 
 ## Testing
 
