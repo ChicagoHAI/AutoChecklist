@@ -130,4 +130,38 @@ pipe = pipeline("code_review", scorer="strict")
 
 Custom generators registered via `register_custom_generator()` always use the unweighted `ChecklistResponse` schema. To use weighted output (`WeightedChecklistResponse`), instantiate `DirectGenerator` directly with `response_schema=WeightedChecklistResponse`.
 
+### Custom Response Schemas
+
+You can pass any Pydantic model as `response_schema` to define your own output structure. When a custom schema is provided, format instructions are skipped and the LLM is guided entirely via structured output enforcement.
+
+```python
+from pydantic import BaseModel
+from autochecklist import DirectGenerator
+
+class ActionItem(BaseModel):
+    item: str
+    sources: list[int]
+
+class ActionItemsResponse(BaseModel):
+    questions: list[ActionItem]
+
+gen = DirectGenerator(
+    custom_prompt="Generate evaluation criteria with source references for:\n\n{input}",
+    response_schema=ActionItemsResponse,
+    model="openai/gpt-5-mini",
+)
+checklist = gen.generate(input="Write a literature review.")
+```
+
+The parser auto-detects the list field and question text:
+
+- **List field**: uses `questions` if present, otherwise the first list field (e.g., `items`, `criteria`)
+- **Question text**: uses `question` if present, otherwise the first `str` field (e.g., `item`, `text`)
+- **Extra fields**: any fields beyond the question text, `weight`, and `category` are preserved in `ChecklistItem.metadata`
+
+```python
+checklist.items[0].question   # "Is it cited?"
+checklist.items[0].metadata   # {"sources": [1, 3]}
+```
+
 **Scorers** also use structured JSON output (`BatchScoringResponse`, `ItemScoringResponse`, etc.) with the same provider-level enforcement and fallback. Your custom scorer prompt does not need to dictate the output format.

@@ -154,8 +154,8 @@ class ContrastiveGenerator(DirectGenerator):
                 )
             format_kwargs["reference"] = reference
 
-        # Load format instructions
-        format_text = load_format(self._format_name)
+        # Load format instructions (skip for custom schemas)
+        format_text = load_format(self._format_name) if self._format_name else ""
 
         # Inject format inline if template has {format_instructions} placeholder,
         # otherwise append after the prompt (default).

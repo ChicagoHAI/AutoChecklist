@@ -56,10 +56,17 @@ class DirectGenerator(InstanceChecklistGenerator):
         self._method_name = method_name
         self.max_items = preset.get("max_items", max_items)
         self.min_items = preset.get("min_items", min_items)
+
+        is_custom_schema = response_schema is not None
         self._response_schema = response_schema or preset.get(
             "response_schema", ChecklistResponse
         )
-        self._format_name = format_name or preset.get("format_name", "checklist")
+        if format_name is not None:
+            self._format_name = format_name
+        elif is_custom_schema:
+            self._format_name = None
+        else:
+            self._format_name = preset.get("format_name", "checklist")
 
         # Load template
         if custom_prompt is not None:
@@ -115,8 +122,8 @@ class DirectGenerator(InstanceChecklistGenerator):
         if "history" in self._template._placeholders:
             format_kwargs["history"] = history
 
-        # Load format instructions
-        format_text = load_format(self._format_name)
+        # Load format instructions (skip for custom schemas)
+        format_text = load_format(self._format_name) if self._format_name else ""
 
         # Inject format inline if template has {format_instructions} placeholder,
         # otherwise append after the prompt (default).
@@ -149,6 +156,9 @@ class DirectGenerator(InstanceChecklistGenerator):
 
         Primary path: json.loads() succeeds (structured output).
         Fallback path: extract_json() extracts JSON from raw text.
+
+        Auto-detects the list field and item fields from the schema,
+        supporting both built-in and custom response schemas.
         """
         try:
             data = json.loads(raw)
@@ -156,13 +166,57 @@ class DirectGenerator(InstanceChecklistGenerator):
             data = extract_json(raw)
         validated = self._response_schema.model_validate(data)
 
+        # Find the list field (first List[BaseModel] field)
+        item_list = self._get_item_list(validated)
+
         items = []
-        for q in validated.questions[: self.max_items]:
+        for q in item_list[: self.max_items]:
+            q_data = q.model_dump() if hasattr(q, "model_dump") else {}
+            # Find question text: use 'question' field, or first str field
+            question, question_key = self._get_question_text(q, q_data)
+            weight = getattr(q, "weight", 100.0)
+            category = getattr(q, "category", None)
+            # Extra fields → metadata
+            known = {question_key, "weight", "category"}
+            extra = {k: v for k, v in q_data.items() if k not in known}
             items.append(
                 ChecklistItem(
-                    question=q.question,
-                    weight=getattr(q, "weight", 100.0),
-                    category=getattr(q, "category", None),
+                    question=question,
+                    weight=weight,
+                    category=category,
+                    metadata=extra if extra else {},
                 )
             )
         return items
+
+    @staticmethod
+    def _get_item_list(validated: Any) -> list:
+        """Extract the list of items from a validated response model."""
+        # Try 'questions' first (built-in convention)
+        if hasattr(validated, "questions"):
+            return validated.questions
+        # Auto-detect: first list attribute
+        for field_name in type(validated).model_fields:
+            value = getattr(validated, field_name)
+            if isinstance(value, list):
+                return value
+        raise ValueError(
+            f"Cannot find list field in {type(validated).__name__}. "
+            "Schema must have a list field (e.g., 'questions', 'items')."
+        )
+
+    @staticmethod
+    def _get_question_text(item: Any, item_data: dict) -> tuple[str, str]:
+        """Extract question text and its field key from an item."""
+        if isinstance(item, str):
+            return item, "question"
+        if hasattr(item, "question"):
+            return item.question, "question"
+        # Fall back to first str field
+        for key, value in item_data.items():
+            if isinstance(value, str):
+                return value, key
+        raise ValueError(
+            f"Cannot find question text in {type(item).__name__}. "
+            "Item must have a 'question' field or at least one str field."
+        )

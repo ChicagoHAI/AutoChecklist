@@ -112,6 +112,55 @@ class TestCategorizedParsing:
         assert items[0].category is None
 
 
+class TestCustomResponseSchema:
+    def test_custom_schema_with_items_list_str(self):
+        """Custom schema with 'items: List[str]' parses into ChecklistItems."""
+        from pydantic import BaseModel
+        from typing import List
+        from autochecklist.generators.instance_level.direct import DirectGenerator
+
+        class CustomResponse(BaseModel):
+            items: List[str]
+
+        gen = DirectGenerator(
+            method_name="custom",
+            custom_prompt="Generate criteria for: {input}",
+            response_schema=CustomResponse,
+        )
+        assert gen._format_name is None
+
+        raw = '{"items": ["Does the response address the topic?", "Is the tone appropriate?"]}'
+        items = gen._parse_structured(raw)
+        assert len(items) == 2
+        assert items[0].question == "Does the response address the topic?"
+        assert items[1].question == "Is the tone appropriate?"
+        assert items[0].weight == 100.0
+        assert items[0].category is None
+
+    def test_nested_schema_extra_fields_in_metadata(self):
+        """Nested item model with non-str fields preserved in metadata."""
+        from pydantic import BaseModel
+        from autochecklist.generators.instance_level.direct import DirectGenerator
+
+        class ActionItem(BaseModel):
+            item: str
+            sources: list[int]
+
+        class ActionItemsResponse(BaseModel):
+            questions: list[ActionItem]
+
+        gen = DirectGenerator(
+            method_name="custom",
+            custom_prompt="Generate criteria for: {input}",
+            response_schema=ActionItemsResponse,
+        )
+        raw = '{"questions": [{"item": "Is it cited?", "sources": [1, 3]}]}'
+        items = gen._parse_structured(raw)
+        assert len(items) == 1
+        assert items[0].question == "Is it cited?"
+        assert items[0].metadata == {"sources": [1, 3]}
+
+
 class TestContrastiveGeneratorConfig:
     def test_rlcf_candidate_preset_loads(self):
         from autochecklist.generators.instance_level.contrastive import ContrastiveGenerator
