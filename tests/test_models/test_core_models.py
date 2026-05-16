@@ -135,15 +135,14 @@ class TestResponseSchemas:
         assert resp.questions[0].weight == 100
         assert resp.questions[1].weight == 50
 
-    def test_weighted_question_weight_bounds(self):
-        # Valid bounds
+    def test_weighted_question_accepts_full_int_range(self):
+        # Bounds intentionally not enforced: cross-provider JSON-schema compat
+        # (OpenAI/Anthropic/Gemini structured-output disagree on `minimum`/`maximum`).
+        # The 0-100 range is communicated via the generator prompt instead.
         GeneratedWeightedQuestion(question="test?", weight=0)
         GeneratedWeightedQuestion(question="test?", weight=100)
-        # Out of bounds
-        with pytest.raises(ValidationError):
-            GeneratedWeightedQuestion(question="test?", weight=-1)
-        with pytest.raises(ValidationError):
-            GeneratedWeightedQuestion(question="test?", weight=101)
+        GeneratedWeightedQuestion(question="test?", weight=-1)
+        GeneratedWeightedQuestion(question="test?", weight=101)
 
     def test_batch_scoring_response_valid(self):
         resp = BatchScoringResponse(answers=[

@@ -281,7 +281,7 @@ class Selector(ChecklistRefiner):
                 questions=questions_text,
                 feedback_item=fb_item,
             )
-            response = self._call_model(prompt)
+            response = self._call_model(prompt, model=self.classifier_model)
 
             # Parse question numbers from response
             nums = re.findall(r"\d+", response)

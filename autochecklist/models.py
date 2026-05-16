@@ -29,7 +29,7 @@ class ChecklistItem(BaseModel):
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
     question: str
-    weight: float = Field(default=100.0, ge=0.0, le=100.0)  # RLCF uses 0-100
+    weight: float = 100.0  # RLCF uses 0-100; constraint omitted for cross-provider JSON-schema compat
     category: Optional[str] = None  # For grouping (e.g., "factuality", "format")
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -263,7 +263,7 @@ class GeneratedQuestion(BaseModel):
 class GeneratedWeightedQuestion(BaseModel):
     """A single generated yes/no question with importance weight."""
     question: str
-    weight: int = Field(ge=0, le=100)
+    weight: int  # 0-100; constraint omitted for cross-provider JSON-schema compat (see ChecklistItem.weight)
 
 
 class ChecklistResponse(BaseModel):

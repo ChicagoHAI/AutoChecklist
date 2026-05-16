@@ -19,6 +19,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+!ui/frontend/src/app/build/
 develop-eggs/
 dist/
 downloads/

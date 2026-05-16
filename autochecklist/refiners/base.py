@@ -75,8 +75,18 @@ class ChecklistRefiner(ABC):
         prompt: str,
         system_prompt: Optional[str] = None,
         response_format: Optional[Dict] = None,
+        model: Optional[str] = None,
     ) -> str:
-        """Call the LLM and return the response text."""
+        """Call the LLM and return the response text.
+
+        Args:
+            prompt: User message content.
+            system_prompt: Optional system message.
+            response_format: Optional structured-output spec.
+            model: Optional model override. Defaults to ``self.model`` when
+                not provided. Useful when a refiner has a secondary model
+                role (e.g. ``Selector.classifier_model``).
+        """
         messages: List[Dict[str, str]] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
@@ -84,7 +94,7 @@ class ChecklistRefiner(ABC):
 
         client = self._get_or_create_client()
         kwargs: Dict[str, Any] = {
-            "model": self.model,
+            "model": model if model is not None else self.model,
             "messages": messages,
             "temperature": self.temperature,
             "max_tokens": 2048,

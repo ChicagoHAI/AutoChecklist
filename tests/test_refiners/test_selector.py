@@ -93,8 +93,32 @@ class TestSelectorInit:
         selector = Selector()
         assert selector.refiner_name == "selector"
 
+    def test_default_classifier_model(self):
+        """Default classifier_model should be openai/gpt-4o-mini."""
+        selector = Selector()
+        assert selector.classifier_model == "openai/gpt-4o-mini"
 
-class TestSelectorSmallChecklist:
+    def test_custom_classifier_model(self):
+        """Should accept custom classifier_model."""
+        selector = Selector(classifier_model="openai/gpt-5-nano")
+        assert selector.classifier_model == "openai/gpt-5-nano"
+
+
+class TestSelectorClassifierModel:
+    """Tests that _classify_feedback honors classifier_model."""
+
+    def test_classify_uses_classifier_model_not_self_model(self, small_checklist):
+        """_classify_feedback should pass classifier_model, not self.model, to _call_model."""
+        selector = Selector(
+            model="anthropic/claude-sonnet-4.6",
+            classifier_model="openai/gpt-4o-mini",
+            observations=["obs A", "obs B"],
+        )
+        with patch.object(selector, "_call_model", return_value="0") as mock_call:
+            selector._classify_feedback(small_checklist)
+        assert mock_call.call_count == 2
+        for call in mock_call.call_args_list:
+            assert call.kwargs.get("model") == "openai/gpt-4o-mini"
     """Tests when checklist is already small enough."""
 
     @patch("autochecklist.refiners.selector.get_embeddings")
